@@ -74,6 +74,7 @@ interface ConnectorsInterface {
 contract Helpers {
     address public index;
     address public list;
+    address public connectors;
     IndexInterface indexContract;
     ListInterface listContract;
     ConnectorsInterface connectorsContract;
@@ -188,6 +189,7 @@ contract Resolver is ConnectorsResolver {
         indexContract = IndexInterface(index);
         list = indexContract.list();
         listContract = ListInterface(list);
-        connectorsContract = ConnectorsInterface(indexContract.connectors(version));
+        connectors = indexContract.connectors(version);
+        connectorsContract = ConnectorsInterface(connectors);
     }
 }
