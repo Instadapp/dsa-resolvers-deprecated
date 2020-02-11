@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 interface AccountInterface {
     function isAuth(address user) external view returns (bool);
-    function sheild(address user) external view returns (bool);
+    function sheild() external view returns (bool);
     function version() external view returns (uint);
 }
 
@@ -79,7 +79,7 @@ contract Helpers {
     ConnectorsInterface connectorsContract;
 }
 
-contract SmartAccountResolver is Helpers {
+contract AccountResolver is Helpers {
 
     function getID(address account) public view returns(uint id){
         return listContract.accountID(account);
@@ -139,6 +139,7 @@ contract SmartAccountResolver is Helpers {
         address[] accounts;
         uint[] versions;
     }
+
     function getOwnerDetails(address owner) public view returns(OwnerData memory){
         address[] memory accounts = getOwnerAccounts(owner);
         return OwnerData(
@@ -147,21 +148,14 @@ contract SmartAccountResolver is Helpers {
             getAccountVersions(accounts)
         );
     }
+
+    function isShield(address account) public view returns(bool shield) {
+        shield = AccountInterface(account).sheild();
+    }
 }
 
 
-contract ConnectorsResolver is SmartAccountResolver {
-    string public constant name = "v1";
-    uint public constant version = 1;
-
-    constructor(address _index) public{
-        index = _index;
-        indexContract = IndexInterface(index);
-        list = indexContract.list();
-        listContract = ListInterface(list);
-        connectorsContract = ConnectorsInterface(indexContract.connectors(version));
-    }
-
+contract ConnectorsResolver is AccountResolver {
     function getEnabledConnectors() public view returns(address[] memory){
         uint count = connectorsContract.count();
         address enabledAddr = connectorsContract.first();
@@ -181,5 +175,19 @@ contract ConnectorsResolver is SmartAccountResolver {
             addressess[i] = connectorsContract.staticList(i);
         }
         return addressess;
+    }
+}
+
+
+contract Resolver is ConnectorsResolver {
+    string public constant name = "v1";
+    uint public constant version = 1;
+
+    constructor(address _index) public{
+        index = _index;
+        indexContract = IndexInterface(index);
+        list = indexContract.list();
+        listContract = ListInterface(list);
+        connectorsContract = ConnectorsInterface(indexContract.connectors(version));
     }
 }
