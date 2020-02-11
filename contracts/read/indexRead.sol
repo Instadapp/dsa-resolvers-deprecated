@@ -162,7 +162,7 @@ contract ConnectorsResolver is SmartAccountResolver {
         connectorsContract = ConnectorsInterface(indexContract.connectors(version));
     }
 
-    function getEnabledConnectores() public view returns(address[] memory){
+    function getEnabledConnectors() public view returns(address[] memory){
         uint count = connectorsContract.count();
         address enabledAddr = connectorsContract.first();
         address[] memory addressess = new address[](count);
@@ -174,7 +174,7 @@ contract ConnectorsResolver is SmartAccountResolver {
         return addressess;
     }
 
-    function getStaticConnectores() public view returns(address[] memory){
+    function getStaticConnectors() public view returns(address[] memory){
         uint count = connectorsContract.staticCount();
         address[] memory addressess = new address[](count);
         for (uint i = 0; i < count; i++) {
