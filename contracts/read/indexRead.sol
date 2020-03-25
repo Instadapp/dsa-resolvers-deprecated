@@ -59,16 +59,19 @@ interface ConnectorsInterface {
     function connectors(address) external view returns (bool);
     function staticConnectors(address) external view returns (bool);
 
-    function count() external view returns (uint);
-    function first() external view returns (address);
-    function last() external view returns (address);
-    function list(address) external view returns (List memory);
-    function staticCount() external view returns (uint);
-    function staticList(uint) external view returns (address);
+    function connectorArray(uint) external view returns (address);
+    function connectorLength() external view returns (uint);
+    function staticConnectorArray(uint) external view returns (address);
+    function staticConnectorLength() external view returns (uint);
+    function connectorCount() external view returns (uint);
 
     function isConnector(address[] calldata _connectors) external view returns (bool isOk);
     function isStaticConnector(address[] calldata _connectors) external view returns (bool isOk);
 
+}
+
+interface ConnectorInterface {
+    function name() external view returns (string memory);
 }
 
 contract Helpers {
@@ -157,25 +160,67 @@ contract AccountResolver is Helpers {
 
 
 contract ConnectorsResolver is AccountResolver {
+    struct ConnectorsData {
+        address connector;
+        uint connectorID;
+        string name;
+    }
+
     function getEnabledConnectors() public view returns(address[] memory){
-        uint count = connectorsContract.count();
-        address enabledAddr = connectorsContract.first();
-        address[] memory addressess = new address[](count);
-        addressess[0] = enabledAddr;
-        for (uint i = 1; i < count; i++) {
-            ConnectorsInterface.List memory list = connectorsContract.list(enabledAddr);
-            addressess[i] = list.next;
+        uint enabledCount = connectorsContract.connectorCount();
+        address[] memory addresses = new address[](enabledCount);
+        uint connectorArrayLength = connectorsContract.connectorLength();
+        uint count;
+        for (uint i = 0; i < connectorArrayLength ; i++) {
+            address connector = connectorsContract.connectorArray(i);
+            if (connectorsContract.connectors(connector)) {
+                addresses[count] = connector;
+                count++;
+            }
         }
-        return addressess;
+        return addresses;
+    }
+
+    function getEnabledConnectorsData() public view returns(ConnectorsData[] memory){
+        uint enabledCount = connectorsContract.connectorCount();
+        ConnectorsData[] memory connectorsData = new ConnectorsData[](enabledCount);
+        uint connectorArrayLength = connectorsContract.connectorLength();
+        uint count;
+        for (uint i = 0; i < connectorArrayLength ; i++) {
+            address connector = connectorsContract.connectorArray(i);
+            if (connectorsContract.connectors(connector)) {
+                connectorsData[count] = ConnectorsData(
+                    connector,
+                    i+1,
+                    ConnectorInterface(connector).name()
+                );
+                count++;
+            }
+        }
+        return connectorsData;
     }
 
     function getStaticConnectors() public view returns(address[] memory){
-        uint count = connectorsContract.staticCount();
-        address[] memory addressess = new address[](count);
-        for (uint i = 0; i < count; i++) {
-            addressess[i] = connectorsContract.staticList(i);
+        uint staticLength = connectorsContract.staticConnectorLength();
+        address[] memory staticConnectorArray = new address[](staticLength);
+        for (uint i = 0; i < staticLength ; i++) {
+            staticConnectorArray[i] = connectorsContract.staticConnectorArray(i);
         }
-        return addressess;
+        return staticConnectorArray;
+    }
+
+    function getStaticConnectorsData() public view returns(ConnectorsData[] memory){
+        uint staticLength = connectorsContract.staticConnectorLength();
+        ConnectorsData[] memory staticConnectorsData = new ConnectorsData[](staticLength);
+        for (uint i = 0; i < staticLength ; i++) {
+            address staticConnector = connectorsContract.staticConnectorArray(i);
+            staticConnectorsData[i] = ConnectorsData(
+                staticConnector,
+                i+1,
+                ConnectorInterface(staticConnector).name()
+            );
+        }
+        return staticConnectorsData;
     }
 }
 
