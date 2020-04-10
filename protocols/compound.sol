@@ -50,7 +50,8 @@ contract Helpers {
 
 
 contract Resolver is Helpers {
-    function getCompTokensData(address owner, address[] memory cAddress) public view returns (CompData[] memory) {
+
+    function getPosition(address owner, address[] memory cAddress) public view returns (CompData[] memory) {
         CompData[] memory tokensData = new CompData[](cAddress.length);
         for (uint i = 0; i < cAddress.length; i++) {
             CTokenInterface cToken = CTokenInterface(cAddress[i]);
@@ -66,23 +67,6 @@ contract Resolver is Helpers {
         return tokensData;
     }
 
-    function getCompTokenData(address owner, address cAddress) public view returns (
-        uint tokenPrice,
-        uint exRate,
-        uint userBalance,
-        uint userBorrowBalance,
-        uint supplyRate,
-        uint borrowRate
-    )
-    {
-        tokenPrice = OrcaleComp(getOracleAddress()).getUnderlyingPrice(cAddress);
-        CTokenInterface cToken = CTokenInterface(cAddress);
-        exRate = cToken.exchangeRateStored();
-        userBalance = cToken.balanceOf(owner);
-        userBorrowBalance = cToken.borrowBalanceStored(owner);
-        supplyRate = cToken.supplyRatePerBlock();
-        borrowRate = cToken.borrowRatePerBlock();
-    }
 }
 
 
