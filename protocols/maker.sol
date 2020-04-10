@@ -106,7 +106,7 @@ contract Helpers is DSMath {
         address vaultAddress;
     }
 
-    struct IlkData {
+    struct ColInfo {
         uint borrowRate;
         uint price;
         uint liquidationRatio;
@@ -222,18 +222,18 @@ contract VaultResolver is Helpers {
         return vault;
     }
 
-    function getColInfo(string memory name) public view returns (IlkData[] memory) {
-        bytes32 ilks = stringToBytes32(name);
-        IlkData[] memory ilkData = new IlkData[](ilks.length);
+    function getColInfo(string[] memory name) public view returns (ColInfo[] memory) {
+        ColInfo[] memory colInfo = new ColInfo[](name.length);
 
-        for (uint i = 0; i < ilks.length; i++) {
-            ilkData[i] = IlkData(
-                getFee(ilks[i]),
-                getColPrice(ilks[i]),
-                getColRatio(ilks[i])
+        for (uint i = 0; i < name.length; i++) {
+            bytes32 ilk = stringToBytes32(name[i]);
+            colInfo[i] = ColInfo(
+                getFee(ilk),
+                getColPrice(ilk),
+                getColRatio(ilk)
             );
         }
-        return ilkData;
+        return colInfo;
     }
 
 }
