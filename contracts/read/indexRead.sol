@@ -93,20 +93,20 @@ contract AccountResolver is Helpers {
         return listContract.accountAddr(uint64(id));
     }
 
-    function getOwnerIDs(address owner) public view returns(uint64[] memory){
-        ListInterface.UserLink memory userLink = listContract.userLink(owner);
+    function getAuthorityIDs(address authority) public view returns(uint64[] memory){
+        ListInterface.UserLink memory userLink = listContract.userLink(authority);
         uint64[] memory IDs = new uint64[](userLink.count);
         uint64 id = userLink.first;
         for (uint i = 0; i < userLink.count; i++) {
             IDs[i] = id;
-            ListInterface.UserList memory userList = listContract.userList(owner, id);
+            ListInterface.UserList memory userList = listContract.userList(authority, id);
             id = userList.next;
         }
         return IDs;
     }
 
-    function getOwnerAccounts(address owner) public view returns(address[] memory){
-        uint64[] memory IDs = getOwnerIDs(owner);
+    function getAuthorityAccounts(address authority) public view returns(address[] memory){
+        uint64[] memory IDs = getAuthorityIDs(authority);
         address[] memory accounts = new address[](IDs.length);
         for (uint i = 0; i < IDs.length; i++) {
             accounts[i] = getAccount(IDs[i]);
@@ -114,20 +114,20 @@ contract AccountResolver is Helpers {
         return accounts;
     }
 
-    function getIDOwners(uint id) public view returns(address[] memory){
+    function getIDAuthorities(uint id) public view returns(address[] memory){
         ListInterface.AccountLink memory accountLink = listContract.accountLink(uint64(id));
-        address[] memory owners = new address[](accountLink.count);
-        address owner = accountLink.first;
+        address[] memory authorities = new address[](accountLink.count);
+        address authority = accountLink.first;
         for (uint i = 0; i < accountLink.count; i++) {
-            owners[i] = owner;
-            ListInterface.AccountList memory accountList = listContract.accountList(uint64(id), owner);
-            owner = accountList.next;
+            authorities[i] = authority;
+            ListInterface.AccountList memory accountList = listContract.accountList(uint64(id), authority);
+            authority = accountList.next;
         }
-        return owners;
+        return authorities;
     }
 
-    function getAccountOwners(address account) public view returns(address[] memory){
-        return getIDOwners(getID(account));
+    function getAccountAuthorities(address account) public view returns(address[] memory){
+        return getIDAuthorities(getID(account));
     }
 
     function getAccountVersions(address[] memory accounts) public view returns(uint[] memory) {
@@ -138,16 +138,16 @@ contract AccountResolver is Helpers {
         return versions;
     }
 
-    struct OwnerData {
+    struct AuthorityData {
         uint64[] IDs;
         address[] accounts;
         uint[] versions;
     }
 
-    function getOwnerDetails(address owner) public view returns(OwnerData memory){
-        address[] memory accounts = getOwnerAccounts(owner);
-        return OwnerData(
-            getOwnerIDs(owner),
+    function getAuthorityDetails(address authority) public view returns(AuthorityData memory){
+        address[] memory accounts = getAuthorityAccounts(authority);
+        return AuthorityData(
+            getAuthorityIDs(authority),
             accounts,
             getAccountVersions(accounts)
         );
@@ -225,8 +225,8 @@ contract ConnectorsResolver is AccountResolver {
 }
 
 
-contract Resolver is ConnectorsResolver {
-    string public constant name = "v1";
+contract DSA_Resolver is ConnectorsResolver {
+    string public constant name = "DSA_Resolver_v1";
     uint public constant version = 1;
 
     constructor(address _index) public{
