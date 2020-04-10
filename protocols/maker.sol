@@ -95,27 +95,69 @@ contract Helpers is DSMath {
     struct VaultData {
         uint id;
         address owner;
-        bytes32 ilk;
+        string colType;
         uint collateral;
         uint art;
         uint debt;
         uint liquidatedCol;
-        uint stabiltyRate;
-        uint price;
+        uint borrowRate;
+        uint colPrice;
         uint liquidationRatio;
-        address urn;
+        address vaultAddress;
     }
 
     struct IlkData {
-        uint fee;
+        uint borrowRate;
         uint price;
-        uint ratio;
+        uint liquidationRatio;
+    }
+
+    /**
+     * @dev Convert String to bytes32.
+    */
+    function stringToBytes32(string memory str) internal pure returns (bytes32 result) {
+        require(bytes(str).length != 0, "String-Empty");
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            result := mload(add(str, 32))
+        }
+    }
+
+    /**
+     * @dev Convert bytes32 to String.
+    */
+    function bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
+        bytes memory bytesArray = new bytes(32);
+        for (uint256 i; i < 32; i++) {
+            bytesArray[i] = _bytes32[i];
+            }
+        return string(bytesArray);
+    }
+
+    function getFee(bytes32 ilk) internal view returns (uint fee) {
+        address jug = InstaMcdAddress(getMcdAddresses()).jug();
+        (uint duty,) = JugLike(jug).ilks(ilk);
+        uint base = JugLike(jug).base();
+        fee = add(duty, base);
+    }
+
+    function getColPrice(bytes32 ilk) internal view returns (uint price) {
+        address spot = InstaMcdAddress(getMcdAddresses()).spot();
+        address vat = InstaMcdAddress(getMcdAddresses()).vat();
+        (, uint mat) = SpotLike(spot).ilks(ilk);
+        (,,uint spotPrice,,) = VatLike(vat).ilks(ilk);
+        price = rmul(mat, spotPrice);
+    }
+
+    function getColRatio(bytes32 ilk) internal view returns (uint ratio) {
+        address spot = InstaMcdAddress(getMcdAddresses()).spot();
+        (, ratio) = SpotLike(spot).ilks(ilk);
     }
 }
 
 
-contract Resolver is Helpers {
-    function getVaultsByAddress(address owner) external view returns (VaultData[] memory) {
+contract VaultResolver is Helpers {
+    function getVaults(address owner) external view returns (VaultData[] memory) {
         address manager = InstaMcdAddress(getMcdAddresses()).manager();
         address cdpManger = InstaMcdAddress(getMcdAddresses()).getCdps();
 
@@ -125,7 +167,7 @@ contract Resolver is Helpers {
         for (uint i = 0; i < ids.length; i++) {
             (uint ink, uint art) = VatLike(ManagerLike(manager).vat()).urns(ilks[i], urns[i]);
             (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilks[i]);
-            uint mat = getIlkRatio(ilks[i]);
+            uint mat = getColRatio(ilks[i]);
             uint debt = rmul(art,rate);
             uint price = rmul(priceMargin, mat);
             uint feeRate = getFee(ilks[i]);
@@ -134,7 +176,7 @@ contract Resolver is Helpers {
             vaults[i] = VaultData(
                 ids[i],
                 owner,
-                ilks[i],
+                bytes32ToString(ilks[i]),
                 ink,
                 art,
                 debt,
@@ -158,7 +200,7 @@ contract Resolver is Helpers {
         (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilk);
         uint debt = rmul(art,rate);
 
-        uint mat = getIlkRatio(ilk);
+        uint mat = getColRatio(ilk);
         uint price = rmul(priceMargin, mat);
         uint liqInk = VatLike(ManagerLike(manager).vat()).gem(ilk, urn);
 
@@ -167,7 +209,7 @@ contract Resolver is Helpers {
         VaultData memory vault = VaultData(
             id,
             owner,
-            ilk,
+            bytes32ToString(ilk),
             ink,
             art,
             debt,
@@ -180,56 +222,39 @@ contract Resolver is Helpers {
         return vault;
     }
 
-    function getIlkData(bytes32[] memory ilks) public view returns (IlkData[] memory) {
+    function getColInfo(string memory name) public view returns (IlkData[] memory) {
+        bytes32 ilks = stringToBytes32(name);
         IlkData[] memory ilkData = new IlkData[](ilks.length);
 
         for (uint i = 0; i < ilks.length; i++) {
             ilkData[i] = IlkData(
                 getFee(ilks[i]),
-                getIlkPrice(ilks[i]),
-                getIlkRatio(ilks[i])
+                getColPrice(ilks[i]),
+                getColRatio(ilks[i])
             );
         }
         return ilkData;
     }
 
-    function getFee(bytes32 ilk) public view returns (uint fee) {
-        address jug = InstaMcdAddress(getMcdAddresses()).jug();
-        (uint duty,) = JugLike(jug).ilks(ilk);
-        uint base = JugLike(jug).base();
-        fee = add(duty, base);
-    }
-
-    function getIlkPrice(bytes32 ilk) public view returns (uint price) {
-        address spot = InstaMcdAddress(getMcdAddresses()).spot();
-        address vat = InstaMcdAddress(getMcdAddresses()).vat();
-        (, uint mat) = SpotLike(spot).ilks(ilk);
-        (,,uint spotPrice,,) = VatLike(vat).ilks(ilk);
-        price = rmul(mat, spotPrice);
-    }
-
-    function getIlkRatio(bytes32 ilk) public view returns (uint ratio) {
-        address spot = InstaMcdAddress(getMcdAddresses()).spot();
-        (, ratio) = SpotLike(spot).ilks(ilk);
-    }
 }
 
 
-contract DSRResolver is Resolver {
-    function getDsrRate() external view returns (uint dsr) {
+contract DSRResolver is VaultResolver {
+    function getDsrRate() public view returns (uint dsr) {
         address pot = InstaMcdAddress(getMcdAddresses()).pot();
         dsr = PotLike(pot).dsr();
     }
 
-    function getDaiDeposited(address owner) external view returns (uint amt) {
+    function getDaiPosition(address owner) external view returns (uint amt, uint dsr) {
         address pot = InstaMcdAddress(getMcdAddresses()).pot();
         uint chi = PotLike(pot).chi();
         uint pie = PotLike(pot).pie(owner);
         amt = rmul(pie,chi);
+        dsr = getDsrRate();
     }
 }
 
 
-contract InstaMakerMcdResolver is DSRResolver {
-    string public constant name = "Maker-MCD-Resolver-v1";
+contract InstaMakerResolver is DSRResolver {
+    string public constant name = "Maker-Resolver-v1";
 }
