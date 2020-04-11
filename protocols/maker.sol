@@ -127,12 +127,21 @@ contract Helpers is DSMath {
      * @dev Convert bytes32 to String.
     */
     function bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
-        bytes memory bytesArray = new bytes(32);
+        bytes32  _temp;
+        uint count;
         for (uint256 i; i < 32; i++) {
-            bytesArray[i] = _bytes32[i];
+            _temp = _bytes32[i];
+            if( _temp != bytes32(0)) {
+                count += 1;
             }
-        return string(bytesArray);
+        }
+        bytes memory bytesArray = new bytes(count);
+        for (uint256 i; i < count; i++) {
+                bytesArray[i] = (_bytes32[i]);
+        }
+        return (string(bytesArray));
     }
+
 
     function getFee(bytes32 ilk) internal view returns (uint fee) {
         address jug = InstaMcdAddress(getMcdAddresses()).jug();
