@@ -12,10 +12,38 @@ interface TokenInterface {
     function balanceOf(address) external view returns (uint);
     function approve(address, uint) external;
     function transfer(address, uint) external returns (bool);
+    function decimals() external view returns (uint);
 }
 
 
-contract Helpers {
+contract DSMath {
+
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "math-not-safe");
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "math-not-safe");
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, "sub-overflow");
+    }
+
+    uint constant WAD = 10 ** 18;
+
+    function wmul(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, y), WAD / 2) / WAD;
+    }
+
+    function wdiv(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, WAD), y / 2) / y;
+    }
+
+}
+
+
+contract Helpers is DSMath {
     /**
      * @dev get Ethereum address
      */
@@ -44,19 +72,52 @@ contract OasisHelpers is Helpers {
         _buy = buy == getAddressETH() ? TokenInterface(getAddressWETH()) : TokenInterface(buy);
         _sell = sell == getAddressETH() ? TokenInterface(getAddressWETH()) : TokenInterface(sell);
     }
+
+    function convertTo18(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
+        amt = mul(_amt, 10 ** (18 - _dec));
+    }
+
+    function getBuyUnitAmt(
+        TokenInterface buyAddr,
+        uint expectedAmt,
+        TokenInterface sellAddr,
+        uint sellAmt,
+        uint slippage
+    ) internal view returns (uint unitAmt) {
+        uint _sellAmt = convertTo18((sellAddr).decimals(), sellAmt);
+        uint _buyAmt = convertTo18(buyAddr.decimals(), expectedAmt);
+        unitAmt = wdiv(_buyAmt, _sellAmt);
+        unitAmt = wmul(unitAmt, sub(WAD, slippage));
+    }
+
+    function getSellUnitAmt(
+        TokenInterface sellAddr,
+        uint expectedAmt,
+        TokenInterface buyAddr,
+        uint buyAmt,
+        uint slippage
+    ) internal view returns (uint unitAmt) {
+        uint _buyAmt = convertTo18(buyAddr.decimals(), buyAmt);
+        uint _sellAmt = convertTo18(sellAddr.decimals(), expectedAmt);
+        unitAmt = wdiv(_sellAmt, _buyAmt);
+        unitAmt = wmul(unitAmt, add(WAD, slippage));
+    }
+
 }
 
 
 contract Resolver is OasisHelpers {
 
-    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt) public view returns (uint buyAmt) {
+    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint buyAmt, uint unitAmt) {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
         buyAmt = OasisInterface(getOasisAddr()).getBuyAmount(address(_buyAddr), address(_sellAddr), sellAmt);
+        unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
     }
 
-    function getSellAmount(address buyAddr, address sellAddr, uint buyAmt) public view returns (uint sellAmt) {
+    function getSellAmount(address buyAddr, address sellAddr, uint buyAmt, uint slippage) public view returns (uint sellAmt, uint unitAmt) {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
         sellAmt = OasisInterface(getOasisAddr()).getPayAmount(address(_sellAddr), address(_buyAddr), buyAmt);
+        unitAmt = getBuyUnitAmt(_sellAddr, sellAmt, _buyAddr, buyAmt, slippage);
     }
 
     function getMinSellAmount(address sellAddr) public view returns (uint minAmt) {
