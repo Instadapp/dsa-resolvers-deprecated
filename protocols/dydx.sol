@@ -108,8 +108,7 @@ contract Helpers is DSMath{
         uint tokenPrice;
         uint supplyBalance;
         uint borrowBalance;
-        uint supplyUtil;
-        uint borrowUtil;
+        uint tokenUtil;
     }
 }
 
@@ -128,8 +127,7 @@ contract Resolver is Helpers {
                 solo.getMarketPrice(id).value,
                 tokenBal.sign ? tokenBal.value : 0,
                 !tokenBal.sign ? tokenBal.value : 0,
-                wmul(totalPar.supply, rateIndex.supply),
-                wmul(totalPar.borrow, rateIndex.borrow)
+                wdiv(wmul(totalPar.borrow, rateIndex.borrow), wmul(totalPar.supply, rateIndex.supply))
             );
         }
         return tokensData;
