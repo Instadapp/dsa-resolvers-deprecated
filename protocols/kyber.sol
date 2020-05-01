@@ -1,0 +1,104 @@
+pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
+
+interface KyberInterface {
+    function getExpectedRate(
+        address src,
+        address dest,
+        uint srcQty
+    ) external view returns (uint, uint);
+}
+
+interface TokenInterface {
+    function allowance(address, address) external view returns (uint);
+    function balanceOf(address) external view returns (uint);
+    function approve(address, uint) external;
+    function transfer(address, uint) external returns (bool);
+    function decimals() external view returns (uint);
+}
+
+
+contract DSMath {
+
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "math-not-safe");
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "math-not-safe");
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, "sub-overflow");
+    }
+
+    uint constant WAD = 10 ** 18;
+
+    function wmul(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, y), WAD / 2) / WAD;
+    }
+
+    function wdiv(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, WAD), y / 2) / y;
+    }
+
+}
+
+
+contract Helpers is DSMath {
+    /**
+     * @dev get Ethereum address
+     */
+    function getAddressETH() public pure returns (address) {
+        return 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    }
+}
+
+
+contract KyberHelpers is Helpers {
+    /**
+     * @dev Kyber Proxy Address
+     */
+    function getAddressKyber() public pure returns (address) {
+        return 0x818E6FECD516Ecc3849DAf6845e3EC868087B755;
+    }
+
+    function getTokenDecimals(address buy, address sell) internal view returns(uint _buyDec, uint _sellDec){
+        _buyDec = buy == getAddressETH() ? 18 : TokenInterface(buy).decimals();
+        _sellDec = sell == getAddressETH() ? 18 : TokenInterface(sell).decimals();
+    }
+
+    function convertTo18(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
+        amt = mul(_amt, 10 ** (18 - _dec));
+    }
+
+    function getBuyUnitAmt(
+        address buyAddr,
+        uint expectedAmt,
+        address sellAddr,
+        uint sellAmt,
+        uint slippage
+    ) internal view returns (uint unitAmt) {
+        (uint _buyDec, uint _sellDec) = getTokenDecimals(buyAddr, sellAddr);
+        uint _sellAmt = convertTo18(_sellDec, sellAmt);
+        uint _buyAmt = convertTo18(_buyDec, expectedAmt);
+        unitAmt = wdiv(_buyAmt, _sellAmt);
+        unitAmt = wmul(unitAmt, sub(WAD, slippage));
+    }
+
+}
+
+
+contract Resolver is KyberHelpers {
+
+    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint buyAmt, uint unitAmt) {
+        (buyAmt, ) = KyberInterface(getAddressKyber()).getExpectedRate(sellAddr, buyAddr, sellAmt);
+        unitAmt = getBuyUnitAmt(buyAddr, buyAmt, sellAddr, sellAmt, slippage);
+    }
+
+}
+
+
+contract InstaKyberResolver is Resolver {
+    string public constant name = "Kyber-Resolver-v1";
+}
