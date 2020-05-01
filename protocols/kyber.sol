@@ -10,10 +10,6 @@ interface KyberInterface {
 }
 
 interface TokenInterface {
-    function allowance(address, address) external view returns (uint);
-    function balanceOf(address) external view returns (uint);
-    function approve(address, uint) external;
-    function transfer(address, uint) external returns (bool);
     function decimals() external view returns (uint);
 }
 
