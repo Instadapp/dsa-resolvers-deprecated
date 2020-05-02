@@ -16,14 +16,6 @@ interface OrcaleComp {
 
 
 contract Helpers {
-
-    /**
-     * @dev get Ethereum address
-     */
-    function getAddressETH() public pure returns (address) {
-        return 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    }
-
     /**
      * @dev get Compound Comptroller Address
      */
@@ -35,7 +27,7 @@ contract Helpers {
      * @dev get Compound Orcale Address
      */
     function getOracleAddress() public pure returns (address) {
-        return 0x1D8aEdc9E924730DD3f9641CDb4D1B92B848b4bd;
+        return 0xDDc46a3B076aec7ab3Fc37420A8eDd2959764Ec4;
     }
 
     struct CompData {
@@ -71,5 +63,5 @@ contract Resolver is Helpers {
 
 
 contract InstaCompoundResolver is Resolver {
-    string public constant name = "Compound-Resolver-v1";
+    string public constant name = "Compound-Resolver-v1.1";
 }
