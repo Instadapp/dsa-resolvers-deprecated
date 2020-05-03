@@ -70,16 +70,16 @@ contract KyberHelpers is Helpers {
 
     function getBuyUnitAmt(
         address buyAddr,
-        uint expectedAmt,
         address sellAddr,
         uint sellAmt,
+        uint expectedRate,
         uint slippage
-    ) internal view returns (uint unitAmt) {
+    ) internal view returns (uint unitAmt, uint _buyAmt) {
         (uint _buyDec, uint _sellDec) = getTokenDecimals(buyAddr, sellAddr);
+        unitAmt = wmul(expectedRate, sub(WAD, slippage));
         uint _sellAmt = convertTo18(_sellDec, sellAmt);
-        uint _buyAmt = convertTo18(_buyDec, expectedAmt);
-        unitAmt = wdiv(_buyAmt, _sellAmt);
-        unitAmt = wmul(unitAmt, sub(WAD, slippage));
+        _buyAmt = wmul(_sellAmt, expectedRate);
+        _buyAmt = convertTo18(_buyDec, _buyAmt);
     }
 
 }
@@ -88,8 +88,8 @@ contract KyberHelpers is Helpers {
 contract Resolver is KyberHelpers {
 
     function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint buyAmt, uint unitAmt) {
-        (buyAmt, ) = KyberInterface(getAddressKyber()).getExpectedRate(sellAddr, buyAddr, sellAmt);
-        unitAmt = getBuyUnitAmt(buyAddr, buyAmt, sellAddr, sellAmt, slippage);
+        (uint expectedRate, ) = KyberInterface(getAddressKyber()).getExpectedRate(sellAddr, buyAddr, sellAmt);
+        (unitAmt, buyAmt) = getBuyUnitAmt(buyAddr, sellAddr, sellAmt, expectedRate, slippage);
     }
 
 }
