@@ -68,6 +68,10 @@ contract KyberHelpers is Helpers {
         amt = mul(_amt, 10 ** (18 - _dec));
     }
 
+    function convert18ToDec(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
+        amt = (_amt / 10 ** (18 - _dec));
+    }
+
     function getBuyUnitAmt(
         address buyAddr,
         address sellAddr,
@@ -79,7 +83,7 @@ contract KyberHelpers is Helpers {
         unitAmt = wmul(expectedRate, sub(WAD, slippage));
         uint _sellAmt = convertTo18(_sellDec, sellAmt);
         _buyAmt = wmul(_sellAmt, expectedRate);
-        _buyAmt = convertTo18(_buyDec, _buyAmt);
+        _buyAmt = convert18ToDec(_buyDec, _buyAmt);
     }
 
 }
