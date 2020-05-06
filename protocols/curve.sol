@@ -194,6 +194,6 @@ contract Resolver is CurveHelpers {
 }
 
 
-contract InstaKyberResolver is Resolver {
-    string public constant name = "Kyber-Resolver-v1";
+contract InstaCurveResolver is Resolver {
+    string public constant name = "Curve-Resolver-v1";
 }
