@@ -33,6 +33,8 @@ interface ICurveZap {
 
 interface TokenInterface {
     function decimals() external view returns (uint);
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address) external view returns (uint);
 }
 
 
@@ -190,6 +192,28 @@ contract Resolver is CurveHelpers {
         amts[uint(getTokenI(token))] = withdrawAmt;
         curveAmt = ICurve(getCurveSwapAddr()).calc_token_amount(amts, false);
         unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
+    }
+
+    function getPosition(
+        address user
+    ) public view returns (
+        uint userBal,
+        uint totalSupply,
+        uint userShare,
+        uint poolDaiBal,
+        uint poolUsdcBal,
+        uint poolUsdtBal,
+        uint poolSusdBal
+    ) {
+        TokenInterface curveToken = TokenInterface(getCurveTokenAddr());
+        userBal = curveToken.balanceOf(user);
+        totalSupply = curveToken.totalSupply();
+        userShare = wdiv(userBal, totalSupply);
+        ICurve curveContract = ICurve(getCurveSwapAddr());
+        poolDaiBal = TokenInterface(curveContract.underlying_coins(0)).balanceOf(getCurveSwapAddr());
+        poolUsdcBal = TokenInterface(curveContract.underlying_coins(1)).balanceOf(getCurveSwapAddr());
+        poolUsdtBal = TokenInterface(curveContract.underlying_coins(2)).balanceOf(getCurveSwapAddr());
+        poolSusdBal = TokenInterface(curveContract.underlying_coins(3)).balanceOf(getCurveSwapAddr());
     }
 }
 
