@@ -153,7 +153,7 @@ contract CurveHelpers is Helpers {
         uint _depositAmt = convertTo18(TokenInterface(token).decimals(), depositAmt);
         uint _curveAmt = convertTo18(TokenInterface(getCurveTokenAddr()).decimals(), curveAmt);
         unitAmt = wdiv(_curveAmt, _depositAmt);
-        unitAmt = wmul(unitAmt, sub(WAD, slippage)); // TODO - check
+        unitAmt = wmul(unitAmt, sub(WAD, slippage));
     }
 
     function getWithdrawtUnitAmt(
@@ -165,7 +165,7 @@ contract CurveHelpers is Helpers {
         uint _withdrawAmt = convertTo18(TokenInterface(token).decimals(), withdrawAmt);
         uint _curveAmt = convertTo18(TokenInterface(getCurveTokenAddr()).decimals(), curveAmt);
         unitAmt = wdiv(_curveAmt, _withdrawAmt);
-        unitAmt = wmul(unitAmt, add(WAD, slippage)); // TODO - check
+        unitAmt = wmul(unitAmt, add(WAD, slippage));
     }
 }
 
