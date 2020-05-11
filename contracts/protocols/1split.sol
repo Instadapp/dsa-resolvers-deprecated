@@ -52,7 +52,7 @@ contract DSMath {
 
 
 contract Helpers is DSMath {
-    
+
     /**
      * @dev get Ethereum address
      */
@@ -85,13 +85,13 @@ contract OneSplitHelpers is Helpers {
 
     function getBuyUnitAmt(
         TokenInterface buyAddr,
+        uint expectedAmt,
         TokenInterface sellAddr,
         uint sellAmt,
-        uint buyAmt,
         uint slippage
     ) internal view returns (uint unitAmt) {
         uint _sellAmt = convertTo18(sellAddr.decimals(), sellAmt);
-        uint _buyAmt = convertTo18(buyAddr.decimals(), buyAmt);
+        uint _buyAmt = convertTo18(buyAddr.decimals(), expectedAmt);
         unitAmt = wdiv(_buyAmt, _sellAmt);
         unitAmt = wmul(unitAmt, sub(WAD, slippage));
     }
@@ -118,11 +118,11 @@ contract Resolver is OneSplitHelpers {
                     distribution,
                     disableDexes
                     );
-        unitAmt = getBuyUnitAmt(_buyAddr, _sellAddr, sellAmt, buyAmt, slippage);
+        unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
     }
 }
 
 
 contract InstaOneSplitResolver is Resolver {
-    string public constant name = "1split-Resolver-v1";
+    string public constant name = "1Split-Resolver-v1";
 }
