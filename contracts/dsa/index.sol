@@ -144,12 +144,39 @@ contract AccountResolver is Helpers {
         uint[] versions;
     }
 
+    struct AccountData {
+        uint ID;
+        address account;
+        uint version;
+        address[] authorities;
+    }
+
     function getAuthorityDetails(address authority) public view returns(AuthorityData memory){
         address[] memory accounts = getAuthorityAccounts(authority);
         return AuthorityData(
             getAuthorityIDs(authority),
             accounts,
             getAccountVersions(accounts)
+        );
+    }
+
+    function getAccountIdDetails(uint id) public view returns(AccountData memory){
+        address account = getAccount(uint64(id));
+        return AccountData(
+            id,
+            account,
+            AccountInterface(account).version(),
+            getIDAuthorities(id)
+        );
+    }
+
+    function getAccountDetails(address account) public view returns(AccountData memory){
+        uint id = getID(account);
+        return AccountData(
+            id,
+            account,
+            AccountInterface(account).version(),
+            getIDAuthorities(id)
         );
     }
 
@@ -225,8 +252,8 @@ contract ConnectorsResolver is AccountResolver {
 }
 
 
-contract DSA_Resolver is ConnectorsResolver {
-    string public constant name = "DSA_Resolver_v1";
+contract InstaDSAResolver is ConnectorsResolver {
+    string public constant name = "DSA-Resolver-v1";
     uint public constant version = 1;
 
     constructor(address _index) public{
