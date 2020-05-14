@@ -70,9 +70,9 @@ contract OneSplitHelpers is Helpers {
         return 0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E;
     }
 
-    function getTokenDecimals(address buy, address sell) internal view returns(uint _buyDec, uint _sellDec){
-        _buyDec = buy == getAddressETH() ? 18 : TokenInterface(buy).decimals();
-        _sellDec = sell == getAddressETH() ? 18 : TokenInterface(sell).decimals();
+    function getTokenDecimals(TokenInterface buy, TokenInterface sell) internal view returns(uint _buyDec, uint _sellDec){
+        _buyDec = address(buy) == getAddressETH() ? 18 : buy.decimals();
+        _sellDec = address(sell) == getAddressETH() ? 18 : sell.decimals();
     }
 
     function convertTo18(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
@@ -90,8 +90,9 @@ contract OneSplitHelpers is Helpers {
         uint sellAmt,
         uint slippage
     ) internal view returns (uint unitAmt) {
-        uint _sellAmt = convertTo18(sellAddr.decimals(), sellAmt);
-        uint _buyAmt = convertTo18(buyAddr.decimals(), expectedAmt);
+        (uint buyDec, uint sellDec) = getTokenDecimals(buyAddr, sellAddr);
+        uint _sellAmt = convertTo18(sellDec, sellAmt);
+        uint _buyAmt = convertTo18(buyDec, expectedAmt);
         unitAmt = wdiv(_buyAmt, _sellAmt);
         unitAmt = wmul(unitAmt, sub(WAD, slippage));
     }
