@@ -117,7 +117,7 @@ contract Resolver is OasisHelpers {
     function getSellAmount(address buyAddr, address sellAddr, uint buyAmt, uint slippage) public view returns (uint sellAmt, uint unitAmt) {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
         sellAmt = OasisInterface(getOasisAddr()).getPayAmount(address(_sellAddr), address(_buyAddr), buyAmt);
-        unitAmt = getBuyUnitAmt(_sellAddr, sellAmt, _buyAddr, buyAmt, slippage);
+        unitAmt = getSellUnitAmt(_sellAddr, sellAmt, _buyAddr, buyAmt, slippage);
     }
 
     function getMinSellAmount(address sellAddr) public view returns (uint minAmt) {
