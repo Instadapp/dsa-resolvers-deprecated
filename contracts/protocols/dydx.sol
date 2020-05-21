@@ -15,13 +15,13 @@ interface ERC20Interface {
 interface SoloMarginContract {
 
     struct Info {
-        address owner;  // The address that owns the account
-        uint256 number; // A nonce that allows a single address to control many accounts
+        address owner;
+        uint256 number;
     }
 
 
     struct Wei {
-        bool sign; // true if positive
+        bool sign;
         uint256 value;
     }
 
@@ -45,11 +45,6 @@ interface SoloMarginContract {
     function getMarketTotalPar(uint256 marketId) external view returns (TotalPar memory);
     function getMarketCurrentIndex(uint256 marketId) external view returns (Index memory);
 }
-
-interface RegistryInterface {
-    function proxies(address owner) external view returns (address);
-}
-
 
 contract DSMath {
 
