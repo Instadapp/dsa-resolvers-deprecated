@@ -167,7 +167,7 @@ contract Resolver is UniswapHelpers {
 
     function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint expectedRate, uint unitAmt) {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
-        expectedRate = getExpectedSellAmt(address(_buyAddr), address(_sellAddr), sellAmt);
+        expectedRate = getExpectedBuyAmt(address(_buyAddr), address(_sellAddr), sellAmt);
         unitAmt = getBuyUnitAmt(_buyAddr, expectedRate, _sellAddr, sellAmt, slippage);
     }
 
