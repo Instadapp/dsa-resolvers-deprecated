@@ -28,6 +28,7 @@ interface TokenInterface {
     function approve(address, uint) external;
     function transfer(address, uint) external returns (bool);
     function decimals() external view returns (uint);
+    function totalSupply() external view returns (uint);
 }
 
 contract DSMath {
@@ -160,21 +161,69 @@ contract UniswapHelpers is Helpers {
         unitAmt = wmul(unitAmt, add(WAD, slippage));
     }
 
+    function getMinAmount(
+        TokenInterface token,
+        uint amt,
+        uint slippage
+    ) internal view returns(uint minAmt) {
+        uint _amt18 = convertTo18(token.decimals(), amt);
+        minAmt = wmul(_amt18, sub(WAD, slippage));
+        minAmt = convert18ToDec(token.decimals(), minAmt);
+    }
 }
 
 
 contract Resolver is UniswapHelpers {
 
-    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint expectedRate, uint unitAmt) {
+    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage)
+    public view returns (uint expectedRate, uint unitAmt)
+    {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
         expectedRate = getExpectedBuyAmt(address(_buyAddr), address(_sellAddr), sellAmt);
         unitAmt = getBuyUnitAmt(_buyAddr, expectedRate, _sellAddr, sellAmt, slippage);
     }
 
-    function getSellAmount(address buyAddr, address sellAddr, uint buyAmt, uint slippage) public view returns (uint expectedRate, uint unitAmt) {
+    function getSellAmount(address buyAddr, address sellAddr, uint buyAmt, uint slippage)
+    public view returns (uint expectedRate, uint unitAmt)
+    {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
         expectedRate = getExpectedSellAmt(address(_buyAddr), address(_sellAddr), buyAmt);
         unitAmt = getSellUnitAmt(_sellAddr, expectedRate, _buyAddr, buyAmt, slippage);
+    }
+
+    function getLiquidityAmounts(
+        address tokenA,
+        address tokenB,
+        uint amtA
+    )
+    public view returns (uint amtB, uint unitAmt)
+    {
+        (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
+        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
+        require(exchangeAddr != address(0), "pair-not-found.");
+        uint _amtA18 = convertTo18(_tokenA.decimals(), _tokenA.balanceOf(exchangeAddr));
+        uint _amtB18 = convertTo18(_tokenB.decimals(), _tokenB.balanceOf(exchangeAddr));
+        unitAmt = wdiv(_amtB18, _amtA18);
+        amtB = convert18ToDec(unitAmt, amtA);
+    }
+
+    function getUniTokenAmount(
+        address tokenA,
+        address tokenB,
+        uint uniAmt
+    )
+    public view returns (uint amtA, uint amtB)
+    {
+        // TODO - shall we return min amtA and amtB?
+        (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
+        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
+        require(exchangeAddr != address(0), "pair-not-found.");
+        TokenInterface uniToken = TokenInterface(exchangeAddr);
+        uint share = wdiv(uniAmt, uniToken.totalSupply());
+        amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
+        amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
     }
 }
 
