@@ -211,11 +211,11 @@ contract Resolver is UniswapHelpers {
     function getUniTokenAmount(
         address tokenA,
         address tokenB,
-        uint uniAmt
+        uint uniAmt,
+        uint slippage
     )
-    public view returns (uint amtA, uint amtB)
+    public view returns (uint amtA, uint amtB, uint minA, uint minB)
     {
-        // TODO - shall we return min amtA and amtB?
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
         IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
         address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
@@ -224,6 +224,8 @@ contract Resolver is UniswapHelpers {
         uint share = wdiv(uniAmt, uniToken.totalSupply());
         amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
         amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
+        minA = getMinAmount(_tokenA, amtA, slippage);
+        minB = getMinAmount(_tokenB, amtB, slippage);
     }
 }
 
