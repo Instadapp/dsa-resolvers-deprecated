@@ -2,14 +2,6 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 interface AaveInterface {
-    function deposit(address _reserve, uint256 _amount, uint16 _referralCode) external payable;
-    function redeemUnderlying(
-        address _reserve,
-        address payable _user,
-        uint256 _amount,
-        uint256 _aTokenBalanceAfterRedeem
-    ) external;
-    function setUserUseReserveAsCollateral(address _reserve, bool _useAsCollateral) external;
     function getUserReserveData(address _reserve, address _user) external view returns (
         uint256 currentATokenBalance,
         uint256 currentBorrowBalance,
@@ -22,8 +14,6 @@ interface AaveInterface {
         uint256 lastUpdateTimestamp,
         bool usageAsCollateralEnabled
     );
-    function borrow(address _reserve, uint256 _amount, uint256 _interestRateMode, uint16 _referralCode) external;
-    function repay(address _reserve, uint256 _amount, address payable _onBehalfOf) external payable;
     function getUserAccountData(address _user) external view returns (
         uint256 totalLiquidityETH,
         uint256 totalCollateralETH,
@@ -40,16 +30,6 @@ interface AaveProviderInterface {
     function getLendingPool() external view returns (address);
     function getLendingPoolCore() external view returns (address);
     function getPriceOracle() external view returns (address);
-}
-
-interface AaveCoreInterface {
-    function getReserveATokenAddress(address _reserve) external view returns (address);
-}
-
-interface ATokenInterface {
-    function redeem(uint256 _amount) external;
-    function balanceOf(address _user) external view returns(uint256);
-    function principalBalanceOf(address _user) external view returns(uint256);
 }
 
 interface AavePriceInterface {
@@ -109,34 +89,6 @@ contract AaveHelpers is DSMath {
     function getAaveAddress() internal pure returns (address) {
         // return 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8; //mainnet
         return 0x580D4Fdc4BF8f9b5ae2fb9225D584fED4AD5375c; //kovan
-    }
-
-    /**
-     * @dev get Aave Core Address
-    */
-    function getAaveCoreAddress() internal pure returns (address) {
-        // return 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8; //mainnet
-        return 0x95D1189Ed88B380E319dF73fF00E479fcc4CFa45; //kovan
-    }
-
-    /**
-     * @dev get Referral Code
-    */
-    function getReferralCode() internal pure returns (uint16) {
-        return 3228;
-    }
-
-    function getIsColl(AaveInterface aave, address token) internal view returns (bool isCol) {
-        (, , , , , , , , , isCol) = aave.getUserReserveData(token, address(this));
-    }
-
-    function getWithdrawBalance(address token) internal view returns (uint bal) {
-        AaveInterface aave = AaveInterface(getAaveAddress());
-        (bal, , , , , , , , , ) = aave.getUserReserveData(token, address(this));
-    }
-
-    function getPaybackBalance(AaveInterface aave, address token) internal view returns (uint bal, uint fee) {
-        (, bal, , , , , fee, , , ) = aave.getUserReserveData(token, address(this));
     }
 
     struct AaveTokenData {
@@ -218,6 +170,6 @@ contract Resolver is AaveHelpers {
     }
 }
 
-contract InstaDydxResolver is Resolver {
-    string public constant name = "Dydx-Resolver-v1";
+contract InstaAaveResolver is Resolver {
+    string public constant name = "Aave-Resolver-v1";
 }
