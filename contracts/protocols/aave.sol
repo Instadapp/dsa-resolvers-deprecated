@@ -104,6 +104,7 @@ contract AaveHelpers is DSMath {
         uint totalFeesETH;
         uint availableBorrowsETH;
         uint currentLiquidationThreshold;
+        uint ltv;
         uint healthFactor;
     }
 
@@ -147,7 +148,7 @@ contract AaveHelpers is DSMath {
             uint totalFeesETH,
             uint availableBorrowsETH,
             uint currentLiquidationThreshold,
-            ,
+            uint ltv,
             uint healthFactor
         ) = aave.getUserAccountData(user);
 
@@ -158,6 +159,7 @@ contract AaveHelpers is DSMath {
             totalFeesETH,
             availableBorrowsETH,
             currentLiquidationThreshold,
+            ltv,
             healthFactor
         );
     }
