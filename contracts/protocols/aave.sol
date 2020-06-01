@@ -39,6 +39,11 @@ interface AavePriceInterface {
     function getFallbackOracle() external view returns(address);
 }
 
+interface AaveCoreInterface {
+    function getReserveCurrentLiquidityRate(address _reserve) external view returns (uint256);
+    function getReserveCurrentVariableBorrowRate(address _reserve) external view returns (uint256);
+}
+
 contract DSMath {
 
     function add(uint x, uint y) internal pure returns (uint z) {
@@ -76,19 +81,11 @@ contract DSMath {
 
 contract AaveHelpers is DSMath {
     /**
-     * @dev get Aave Address
+     * @dev get Aave Provider Address
     */
     function getAaveProviderAddress() internal pure returns (address) {
         // return 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8; //mainnet
         return 0x506B0B2CF20FAA8f38a4E2B524EE43e1f4458Cc5; //kovan
-    }
-
-    /**
-     * @dev get Aave Address
-    */
-    function getAaveAddress() internal pure returns (address) {
-        // return 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8; //mainnet
-        return 0x580D4Fdc4BF8f9b5ae2fb9225D584fED4AD5375c; //kovan
     }
 
     struct AaveTokenData {
@@ -110,18 +107,27 @@ contract AaveHelpers is DSMath {
         uint healthFactor;
     }
 
-    function getTokenData(AaveInterface aave, address user, address token, uint price)
+    function getTokenData(
+        AaveCoreInterface aaveCore,
+        AaveInterface aave,
+        address user,
+        address token,
+        uint price)
     internal view returns(AaveTokenData memory tokenData) {
         (
             uint supplyBal,
             uint borrowBal,
             ,
             ,
-            uint borrowRate,
-            uint supplyRate,
+            ,
+            ,
             uint fee,
             ,,
         ) = aave.getUserReserveData(token, user);
+
+        uint supplyRate = aaveCore.getReserveCurrentLiquidityRate(token);
+        uint borrowRate = aaveCore.getReserveCurrentVariableBorrowRate(token);
+
         tokenData = AaveTokenData(
             price,
             supplyBal,
@@ -159,12 +165,14 @@ contract AaveHelpers is DSMath {
 
 contract Resolver is AaveHelpers {
     function getPosition(address user, address[] memory tokens) public view returns(AaveTokenData[] memory, AaveUserData memory) {
-        AaveInterface aave = AaveInterface(getAaveAddress());
         AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
+        AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
+        AaveCoreInterface aaveCore = AaveCoreInterface(AaveProvider.getLendingPoolCore());
+
         AaveTokenData[] memory tokensData = new AaveTokenData[](tokens.length);
         uint[] memory tokenPrices = AavePriceInterface(AaveProvider.getPriceOracle()).getAssetsPrices(tokens);
         for (uint i = 0; i < tokens.length; i++) {
-            tokensData[i] = getTokenData(aave, user, tokens[i], tokenPrices[i]);
+            tokensData[i] = getTokenData(aaveCore, aave, user, tokens[i], tokenPrices[i]);
         }
         return (tokensData, getUserData(aave, user));
     }
