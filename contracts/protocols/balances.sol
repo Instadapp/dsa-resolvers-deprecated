@@ -20,7 +20,7 @@ contract InstaBalanceResolver {
         return tokensBal;
     }
 
-    function getAllowance(address owner, address spender, address[] memory tknAddress) public view returns (uint[] memory) {
+    function getAllowances(address owner, address spender, address[] memory tknAddress) public view returns (uint[] memory) {
         uint[] memory tokenAllowances = new uint[](tknAddress.length);
         for (uint i = 0; i < tknAddress.length; i++) {
             if (tknAddress[i] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
