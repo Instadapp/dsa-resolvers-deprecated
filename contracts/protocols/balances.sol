@@ -2,6 +2,7 @@ pragma solidity ^0.6.0;
 
 interface TokenInterface {
     function balanceOf(address) external view returns (uint);
+    function allowance(address owner, address spender) external view returns (uint256);
 }
 
 
@@ -17,5 +18,18 @@ contract InstaBalanceResolver {
             }
         }
         return tokensBal;
+    }
+
+    function getAllowance(address owner, address spender, address[] memory tknAddress) public view returns (uint[] memory) {
+        uint[] memory tokenAllowances = new uint[](tknAddress.length);
+        for (uint i = 0; i < tknAddress.length; i++) {
+            if (tknAddress[i] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+                tokenAllowances[i] = uint(-1);
+            } else {
+                TokenInterface token = TokenInterface(tknAddress[i]);
+                tokenAllowances[i] = token.allowance(owner, spender);
+            }
+        }
+        return tokenAllowances;
     }
 }
