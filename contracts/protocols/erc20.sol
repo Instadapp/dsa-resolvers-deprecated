@@ -6,7 +6,8 @@ interface TokenInterface {
 }
 
 
-contract InstaBalanceResolver {
+contract Resolver {
+
     function getBalances(address owner, address[] memory tknAddress) public view returns (uint[] memory) {
         uint[] memory tokensBal = new uint[](tknAddress.length);
         for (uint i = 0; i < tknAddress.length; i++) {
@@ -24,7 +25,7 @@ contract InstaBalanceResolver {
         uint[] memory tokenAllowances = new uint[](tknAddress.length);
         for (uint i = 0; i < tknAddress.length; i++) {
             if (tknAddress[i] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
-                tokenAllowances[i] = uint(-1);
+                tokenAllowances[i] = 0;
             } else {
                 TokenInterface token = TokenInterface(tknAddress[i]);
                 tokenAllowances[i] = token.allowance(owner, spender);
@@ -32,4 +33,12 @@ contract InstaBalanceResolver {
         }
         return tokenAllowances;
     }
+
+}
+
+
+contract InstaERC20Resolver is Resolver {
+
+    string public constant name = "ERC20-Resolver-v1";
+
 }
