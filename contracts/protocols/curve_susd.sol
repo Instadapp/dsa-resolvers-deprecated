@@ -2,33 +2,10 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 interface ICurve {
-    function get_virtual_price() external returns (uint256 out);
-
+    function get_virtual_price() external view returns (uint256 out);
     function underlying_coins(int128 tokenId) external view returns (address token);
-
     function calc_token_amount(uint256[4] calldata amounts, bool deposit) external view returns (uint256 amount);
-
     function get_dy(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt) external view returns (uint256 buyTokenAmt);
-
-    // Used when there's an underlying token. Example:- cdai, cusdc, etc. If not then
-    function get_dy_underlying(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt) external returns (uint256 buyTokenAmt);
-
-    function exchange(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt, uint256 minBuyToken) external;
-
-    // Used when there's an underlying token. Example:- cdai, cusdc, etc.
-    function exchange_underlying(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt, uint256 minBuyToken) external;
-
-    function remove_liquidity(uint256 _amount, uint256[4] calldata min_amounts) external;
-
-    function remove_liquidity_imbalance(uint256[4] calldata amounts, uint256 max_burn_amount) external;
-}
-
-interface ICurveZap {
-
-    function calc_withdraw_one_coin(uint256 _token_amount, int128 i) external returns (uint256 amount);
-
-    function remove_liquidity_one_coin(uint256 _token_amount, int128 i, uint256 min_uamount) external;
-
 }
 
 interface TokenInterface {
@@ -64,18 +41,7 @@ contract DSMath {
 
 }
 
-
-contract Helpers is DSMath {
-    /**
-     * @dev get Ethereum address
-     */
-    function getAddressETH() public pure returns (address) {
-        return 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    }
-}
-
-
-contract CurveHelpers is Helpers {
+contract CurveHelpers is DSMath {
     /**
      * @dev Return Curve Swap Address
      */
@@ -88,13 +54,6 @@ contract CurveHelpers is Helpers {
      */
     function getCurveTokenAddr() internal pure returns (address) {
         return 0xC25a3A3b969415c80451098fa907EC722572917F;
-    }
-
-    /**
-     * @dev Return Curve Zap Address
-     */
-    function getCurveZapAddr() internal pure returns (address) {
-        return 0xFCBa3E75865d2d561BE8D220616520c171F12851;
     }
 
     function getTokenI(address token) internal pure returns (int128 i) {
@@ -113,16 +72,6 @@ contract CurveHelpers is Helpers {
         } else {
             revert("token-not-found.");
         }
-    }
-
-    function getTokenAddr(ICurve curve, uint256 i) internal view returns (address token) {
-        token = curve.underlying_coins(int128(i));
-        require(token != address(0), "token-not-found.");
-    }
-
-    function getTokenDecimals(address buy, address sell) internal view returns(uint _buyDec, uint _sellDec){
-        _buyDec = buy == getAddressETH() ? 18 : TokenInterface(buy).decimals();
-        _sellDec = sell == getAddressETH() ? 18 : TokenInterface(sell).decimals();
     }
 
     function convertTo18(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
@@ -174,23 +123,40 @@ contract CurveHelpers is Helpers {
 
 contract Resolver is CurveHelpers {
 
-    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage) public view returns (uint buyAmt, uint unitAmt) {
-        buyAmt = ICurve(getCurveSwapAddr()).get_dy(getTokenI(sellAddr), getTokenI(buyAddr), sellAmt);
+    function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage)
+        public
+        view
+        returns (uint buyAmt, uint unitAmt, uint virtualPrice)
+    {
+        ICurve curve = ICurve(getCurveSwapAddr());
+        buyAmt = curve.get_dy(getTokenI(sellAddr), getTokenI(buyAddr), sellAmt);
+        virtualPrice = curve.get_virtual_price();
         unitAmt = getBuyUnitAmt(buyAddr, sellAddr, sellAmt, buyAmt, slippage);
     }
 
-    function getDepositAmount(address token, uint depositAmt, uint slippage) public view returns (uint curveAmt, uint unitAmt) {
+    function getDepositAmount(address token, uint depositAmt, uint slippage)
+        public
+        view
+        returns (uint curveAmt, uint unitAmt, uint virtualPrice)
+    {
         uint[4] memory amts;
         amts[uint(getTokenI(token))] = depositAmt;
-        curveAmt = ICurve(getCurveSwapAddr()).calc_token_amount(amts, true);
+        ICurve curve = ICurve(getCurveSwapAddr());
+        curveAmt = curve.calc_token_amount(amts, true);
+        virtualPrice = curve.get_virtual_price();
         unitAmt = getDepositUnitAmt(token, depositAmt, curveAmt, slippage);
     }
 
-
-    function getWithdrawAmount(address token, uint withdrawAmt, uint slippage) public view returns (uint curveAmt, uint unitAmt) {
+    function getWithdrawAmount(address token, uint withdrawAmt, uint slippage)
+        public
+        view
+        returns (uint curveAmt, uint unitAmt, uint virtualPrice)
+    {
         uint[4] memory amts;
         amts[uint(getTokenI(token))] = withdrawAmt;
-        curveAmt = ICurve(getCurveSwapAddr()).calc_token_amount(amts, false);
+        ICurve curve = ICurve(getCurveSwapAddr());
+        curveAmt = curve.calc_token_amount(amts, false);
+        virtualPrice = curve.get_virtual_price();
         unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
     }
 
@@ -199,6 +165,7 @@ contract Resolver is CurveHelpers {
     ) public view returns (
         uint userBal,
         uint totalSupply,
+        uint virtualPrice,
         uint userShare,
         uint poolDaiBal,
         uint poolUsdcBal,
@@ -210,6 +177,7 @@ contract Resolver is CurveHelpers {
         totalSupply = curveToken.totalSupply();
         userShare = wdiv(userBal, totalSupply);
         ICurve curveContract = ICurve(getCurveSwapAddr());
+        virtualPrice = curveContract.get_virtual_price();
         poolDaiBal = TokenInterface(curveContract.underlying_coins(0)).balanceOf(getCurveSwapAddr());
         poolUsdcBal = TokenInterface(curveContract.underlying_coins(1)).balanceOf(getCurveSwapAddr());
         poolUsdtBal = TokenInterface(curveContract.underlying_coins(2)).balanceOf(getCurveSwapAddr());
@@ -219,5 +187,5 @@ contract Resolver is CurveHelpers {
 
 
 contract InstaCurveResolver is Resolver {
-    string public constant name = "Curve-Resolver-v1";
+    string public constant name = "Curve-SUSD-Resolver-v1.1";
 }
