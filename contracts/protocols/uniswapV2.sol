@@ -124,7 +124,7 @@ contract UniswapHelpers is Helpers {
             buyAmt,
             paths
         );
-        sellAmt = amts[1];
+        sellAmt = amts[0];
     }
 
     function checkPair(
@@ -191,7 +191,7 @@ contract Resolver is UniswapHelpers {
         unitAmt = getSellUnitAmt(_sellAddr, expectedRate, _buyAddr, buyAmt, slippage);
     }
 
-    function getLiquidityAmounts(
+    function getDepositUnitAmt(
         address tokenA,
         address tokenB,
         uint amtA
@@ -205,7 +205,25 @@ contract Resolver is UniswapHelpers {
         uint _amtA18 = convertTo18(_tokenA.decimals(), _tokenA.balanceOf(exchangeAddr));
         uint _amtB18 = convertTo18(_tokenB.decimals(), _tokenB.balanceOf(exchangeAddr));
         unitAmt = wdiv(_amtB18, _amtA18);
-        amtB = convert18ToDec(unitAmt, amtA);
+        amtB = wmul(unitAmt, convertTo18(_tokenA.decimals(), amtA));
+        amtB = convert18ToDec(_tokenB.decimals(), amtB);
+    }
+
+    function getDepositUnitAmtNewPool(
+        address tokenA,
+        address tokenB,
+        uint amtA,
+        uint amtB
+    )
+    public view returns (uint unitAmt)
+    {
+        (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
+        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
+        require(exchangeAddr == address(0), "pair-found.");
+        uint _amtA18 = convertTo18(_tokenA.decimals(), amtA);
+        uint _amtB18 = convertTo18(_tokenB.decimals(), amtB);
+        unitAmt = wdiv(_amtB18, _amtA18);
     }
 
     function getUniTokenAmount(
