@@ -143,16 +143,6 @@ contract UniswapHelpers is Helpers {
         unitAmt = wmul(unitAmt, add(WAD, slippage));
     }
 
-    function getMinAmount(
-        TokenInterface token,
-        uint amt,
-        uint slippage
-    ) internal view returns(uint minAmt) {
-        uint _amt18 = convertTo18(token.decimals(), amt);
-        minAmt = wmul(_amt18, sub(WAD, slippage));
-        minAmt = convert18ToDec(token.decimals(), minAmt);
-    }
-
     function _getWithdrawUnitAmts(
         TokenInterface tokenA,
         TokenInterface tokenB,
