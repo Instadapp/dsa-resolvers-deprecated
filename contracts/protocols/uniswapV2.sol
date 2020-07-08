@@ -189,19 +189,19 @@ contract UniswapHelpers is Helpers {
 contract Resolver is UniswapHelpers {
 
     function getBuyAmount(address buyAddr, address sellAddr, uint sellAmt, uint slippage)
-    public view returns (uint expectedRate, uint unitAmt)
+    public view returns (uint buyAmt, uint unitAmt)
     {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
-        expectedRate = getExpectedBuyAmt(address(_buyAddr), address(_sellAddr), sellAmt);
-        unitAmt = getBuyUnitAmt(_buyAddr, expectedRate, _sellAddr, sellAmt, slippage);
+        buyAmt = getExpectedBuyAmt(address(_buyAddr), address(_sellAddr), sellAmt);
+        unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
     }
 
     function getSellAmount(address buyAddr, address sellAddr, uint buyAmt, uint slippage)
-    public view returns (uint expectedRate, uint unitAmt)
+    public view returns (uint sellAmt, uint unitAmt)
     {
         (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
-        expectedRate = getExpectedSellAmt(address(_buyAddr), address(_sellAddr), buyAmt);
-        unitAmt = getSellUnitAmt(_sellAddr, expectedRate, _buyAddr, buyAmt, slippage);
+        sellAmt = getExpectedSellAmt(address(_buyAddr), address(_sellAddr), buyAmt);
+        unitAmt = getSellUnitAmt(_sellAddr, sellAmt, _buyAddr, buyAmt, slippage);
     }
 
     function getDepositAmount(
