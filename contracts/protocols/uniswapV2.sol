@@ -170,6 +170,38 @@ contract UniswapHelpers is Helpers {
         minAmt = wmul(_amt18, sub(WAD, slippage));
         minAmt = convert18ToDec(token.decimals(), minAmt);
     }
+
+    function _getWithdrawUnitAmts(
+        TokenInterface tokenA,
+        TokenInterface tokenB,
+        uint amtA,
+        uint amtB,
+        uint uniAmt,
+        uint slippage
+    ) internal view returns (uint unitAmtA, uint unitAmtB) {
+        uint _amtA = convertTo18(tokenA.decimals(), amtA);
+        uint _amtB = convertTo18(tokenB.decimals(), amtB);
+        unitAmtA = wdiv(_amtA, uniAmt);
+        unitAmtA = wmul(unitAmtA, sub(WAD, slippage));
+        unitAmtB = wdiv(_amtB, uniAmt);
+        unitAmtB = wmul(unitAmtB, sub(WAD, slippage));
+    }
+
+    function _getWithdrawAmts(
+        TokenInterface _tokenA,
+        TokenInterface _tokenB,
+        uint uniAmt
+    )
+    public view returns (uint amtA, uint amtB)
+    {
+        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
+        require(exchangeAddr != address(0), "pair-not-found.");
+        TokenInterface uniToken = TokenInterface(exchangeAddr);
+        uint share = wdiv(uniAmt, uniToken.totalSupply());
+        amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
+        amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
+    }
 }
 
 
@@ -191,7 +223,7 @@ contract Resolver is UniswapHelpers {
         unitAmt = getSellUnitAmt(_sellAddr, expectedRate, _buyAddr, buyAmt, slippage);
     }
 
-    function getDepositUnitAmt(
+    function getDepositAmount(
         address tokenA,
         address tokenB,
         uint amtA
@@ -209,7 +241,7 @@ contract Resolver is UniswapHelpers {
         amtB = convert18ToDec(_tokenB.decimals(), amtB);
     }
 
-    function getDepositUnitAmtNewPool(
+    function getDepositAmountNewPool(
         address tokenA,
         address tokenB,
         uint amtA,
@@ -226,24 +258,28 @@ contract Resolver is UniswapHelpers {
         unitAmt = wdiv(_amtB18, _amtA18);
     }
 
-    function getUniTokenAmount(
+    function getWithdrawAmounts(
         address tokenA,
         address tokenB,
         uint uniAmt,
         uint slippage
     )
-    public view returns (uint amtA, uint amtB, uint minA, uint minB)
+    public view returns (uint amtA, uint amtB, uint unitAmtA, uint unitAmtB)
     {
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
-        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
-        require(exchangeAddr != address(0), "pair-not-found.");
-        TokenInterface uniToken = TokenInterface(exchangeAddr);
-        uint share = wdiv(uniAmt, uniToken.totalSupply());
-        amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
-        amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
-        minA = getMinAmount(_tokenA, amtA, slippage);
-        minB = getMinAmount(_tokenB, amtB, slippage);
+        (amtA, amtB) = _getWithdrawAmts(
+            _tokenA,
+            _tokenB,
+            uniAmt
+        );
+        (unitAmtA, unitAmtB) = _getWithdrawUnitAmts(
+            _tokenA,
+            _tokenB,
+            amtA,
+            amtB,
+            uniAmt,
+            slippage
+        );
     }
 }
 
