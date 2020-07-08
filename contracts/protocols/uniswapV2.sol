@@ -259,6 +259,51 @@ contract Resolver is UniswapHelpers {
             slippage
         );
     }
+
+    struct TokenPair {
+        TokenInterface tokenA;
+        TokenInterface tokenB;
+    }
+
+    struct PoolData {
+        uint tokenAShare;
+        uint tokenBShare;
+        uint uniAmt;
+        uint totalSupply;
+    }
+
+    function getPosition(
+        address owner,
+        TokenPair[] memory tokenPairs
+    ) public view returns (PoolData[] memory)
+    {
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
+        uint _len = tokenPairs.length;
+        PoolData[] memory poolData = new PoolData[](_len);
+        for (uint i = 0; i < _len; i++) {
+            TokenInterface tokenA = tokenPairs[i].tokenA;
+            TokenInterface tokenB = tokenPairs[i].tokenB;
+            address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(
+                address(tokenA),
+                address(tokenB)
+            );
+            if (exchangeAddr != address(0)) {
+                TokenInterface uniToken = TokenInterface(exchangeAddr);
+                uint uniAmt = uniToken.balanceOf(owner);
+                uint totalSupply = uniToken.totalSupply();
+                uint share = wdiv(uniAmt, totalSupply);
+                uint amtA = wmul(tokenA.balanceOf(exchangeAddr), share);
+                uint amtB = wmul(tokenB.balanceOf(exchangeAddr), share);
+                poolData[i] = PoolData(
+                    amtA,
+                    amtB,
+                    uniAmt,
+                    totalSupply
+                );
+            }
+        }
+        return poolData;
+    }
 }
 
 
