@@ -1,25 +1,15 @@
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
-interface IUniswapV2Router01 {
+interface IUniswapV2Router02 {
     function factory() external pure returns (address);
     function WETH() external pure returns (address);
-    function quote(uint amountA, uint reserveA, uint reserveB) external pure returns (uint amountB);
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) external pure returns (uint amountOut);
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) external pure returns (uint amountIn);
     function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
 interface IUniswapV2Factory {
   function getPair(address tokenA, address tokenB) external view returns (address pair);
-  function allPairs(uint) external view returns (address pair);
-  function allPairsLength() external view returns (uint);
-
-  function feeTo() external view returns (address);
-  function feeToSetter() external view returns (address);
-
-  function createPair(address tokenA, address tokenB) external returns (address pair);
 }
 
 interface TokenInterface {
@@ -76,10 +66,10 @@ contract UniswapHelpers is Helpers {
     }
 
     /**
-     * @dev Return uniswap v2 router Address
+     * @dev Return uniswap v2 router02 Address
      */
     function getUniswapAddr() internal pure returns (address) {
-        return 0x794e6e91555438aFc3ccF1c5076A74F42133d08D; //Mainnet
+        return 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     }
 
     function convert18ToDec(uint _dec, uint256 _amt) internal pure returns (uint256 amt) {
@@ -100,7 +90,7 @@ contract UniswapHelpers is Helpers {
         address sellAddr,
         uint sellAmt
     ) internal view returns(uint buyAmt) {
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
         address[] memory paths = new address[](2);
         paths[0] = address(sellAddr);
         paths[1] = address(buyAddr);
@@ -116,23 +106,15 @@ contract UniswapHelpers is Helpers {
         address sellAddr,
         uint buyAmt
     ) internal view returns(uint sellAmt) {
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
         address[] memory paths = new address[](2);
         paths[0] = address(sellAddr);
         paths[1] = address(buyAddr);
-        uint[] memory amts = router.getAmountsOut(
+        uint[] memory amts = router.getAmountsIn(
             buyAmt,
             paths
         );
         sellAmt = amts[0];
-    }
-
-    function checkPair(
-        IUniswapV2Router01 router,
-        address[] memory paths
-    ) internal view {
-        address pair = IUniswapV2Factory(router.factory()).getPair(paths[0], paths[1]);
-        require(pair != address(0), "No-exchange-address");
     }
 
     function getBuyUnitAmt(
@@ -191,10 +173,9 @@ contract UniswapHelpers is Helpers {
         TokenInterface _tokenA,
         TokenInterface _tokenB,
         uint uniAmt
-    )
-    public view returns (uint amtA, uint amtB)
+    ) internal view returns (uint amtA, uint amtB)
     {
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
         address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
         require(exchangeAddr != address(0), "pair-not-found.");
         TokenInterface uniToken = TokenInterface(exchangeAddr);
@@ -227,11 +208,10 @@ contract Resolver is UniswapHelpers {
         address tokenA,
         address tokenB,
         uint amtA
-    )
-    public view returns (uint amtB, uint unitAmt)
+    ) public view returns (uint amtB, uint unitAmt)
     {
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
         address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
         require(exchangeAddr != address(0), "pair-not-found.");
         uint _amtA18 = convertTo18(_tokenA.decimals(), _tokenA.balanceOf(exchangeAddr));
@@ -246,11 +226,10 @@ contract Resolver is UniswapHelpers {
         address tokenB,
         uint amtA,
         uint amtB
-    )
-    public view returns (uint unitAmt)
+    ) public view returns (uint unitAmt)
     {
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
-        IUniswapV2Router01 router = IUniswapV2Router01(getUniswapAddr());
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
         address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
         require(exchangeAddr == address(0), "pair-found.");
         uint _amtA18 = convertTo18(_tokenA.decimals(), amtA);
@@ -263,8 +242,7 @@ contract Resolver is UniswapHelpers {
         address tokenB,
         uint uniAmt,
         uint slippage
-    )
-    public view returns (uint amtA, uint amtB, uint unitAmtA, uint unitAmtB)
+    ) public view returns (uint amtA, uint amtB, uint unitAmtA, uint unitAmtB)
     {
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
         (amtA, amtB) = _getWithdrawAmts(
