@@ -251,8 +251,8 @@ contract Resolver is UniswapHelpers {
     }
 
     struct TokenPair {
-        TokenInterface tokenA;
-        TokenInterface tokenB;
+        address tokenA;
+        address tokenB;
     }
 
     struct PoolData {
@@ -271,8 +271,7 @@ contract Resolver is UniswapHelpers {
         uint _len = tokenPairs.length;
         PoolData[] memory poolData = new PoolData[](_len);
         for (uint i = 0; i < _len; i++) {
-            TokenInterface tokenA = tokenPairs[i].tokenA;
-            TokenInterface tokenB = tokenPairs[i].tokenB;
+            (TokenInterface tokenA, TokenInterface tokenB) = changeEthAddress(tokenPairs[i].tokenA, tokenPairs[i].tokenB);
             address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(
                 address(tokenA),
                 address(tokenB)
