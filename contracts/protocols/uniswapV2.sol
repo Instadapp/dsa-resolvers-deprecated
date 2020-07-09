@@ -256,8 +256,8 @@ contract Resolver is UniswapHelpers {
     }
 
     struct PoolData {
-        uint tokenAShare;
-        uint tokenBShare;
+        uint tokenAShareAmt;
+        uint tokenBShareAmt;
         uint uniAmt;
         uint totalSupply;
     }
