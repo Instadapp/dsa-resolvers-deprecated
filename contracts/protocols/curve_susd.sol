@@ -14,6 +14,10 @@ interface TokenInterface {
     function balanceOf(address) external view returns (uint);
 }
 
+interface IStakingRewards {
+  function balanceOf(address) external view returns (uint256);
+  function earned(address) external view returns (uint256);
+}
 
 contract DSMath {
 
@@ -54,6 +58,20 @@ contract CurveHelpers is DSMath {
      */
     function getCurveTokenAddr() internal pure returns (address) {
         return 0xC25a3A3b969415c80451098fa907EC722572917F;
+    }
+
+    /**
+     * @dev Return Curve sUSD Staking Address
+     */
+    function getCurveStakingAddr() internal pure returns (address) {
+        return 0xDCB6A51eA3CA5d3Fd898Fd6564757c7aAeC3ca92;
+    }
+
+    /**
+    * @dev Return Synthetix Token address.
+    */
+    function getSnxAddr() internal pure returns (address) {
+        return 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
     }
 
     function getTokenI(address token) internal pure returns (int128 i) {
@@ -160,6 +178,7 @@ contract Resolver is CurveHelpers {
         unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
     }
 
+
     function getPosition(
         address user
     ) public view returns (
@@ -170,7 +189,10 @@ contract Resolver is CurveHelpers {
         uint poolDaiBal,
         uint poolUsdcBal,
         uint poolUsdtBal,
-        uint poolSusdBal
+        uint poolSusdBal,
+        uint stakedBal,
+        uint rewardsEarned,
+        uint snxBal
     ) {
         TokenInterface curveToken = TokenInterface(getCurveTokenAddr());
         userBal = curveToken.balanceOf(user);
@@ -182,10 +204,23 @@ contract Resolver is CurveHelpers {
         poolUsdcBal = TokenInterface(curveContract.underlying_coins(1)).balanceOf(getCurveSwapAddr());
         poolUsdtBal = TokenInterface(curveContract.underlying_coins(2)).balanceOf(getCurveSwapAddr());
         poolSusdBal = TokenInterface(curveContract.underlying_coins(3)).balanceOf(getCurveSwapAddr());
+        // Staking Details.
+        (stakedBal, rewardsEarned, snxBal) = getStakingPosition(user);
+    }
+
+    function getStakingPosition(address user) public view returns (
+        uint stakedBal,
+        uint rewardsEarned,
+        uint snxBal
+    ) {
+        IStakingRewards stakingContract = IStakingRewards(getCurveStakingAddr());
+        stakedBal = stakingContract.balanceOf(user);
+        rewardsEarned = stakingContract.earned(user);
+        snxBal = TokenInterface(getSnxAddr()).balanceOf(user);
     }
 }
 
 
 contract InstaCurveResolver is Resolver {
-    string public constant name = "Curve-SUSD-Resolver-v1.1";
+    string public constant name = "Curve-SUSD-Resolver-v1.2";
 }
