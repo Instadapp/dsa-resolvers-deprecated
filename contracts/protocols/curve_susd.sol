@@ -8,6 +8,10 @@ interface ICurve {
     function get_dy(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt) external view returns (uint256 buyTokenAmt);
 }
 
+interface ICurveZap {
+  function calc_withdraw_one_coin(uint256 _token_amount, int128 i) external view returns (uint256 amount);
+}
+
 interface TokenInterface {
     function decimals() external view returns (uint);
     function totalSupply() external view returns (uint256);
@@ -52,7 +56,14 @@ contract CurveHelpers is DSMath {
     function getCurveSwapAddr() internal pure returns (address) {
         return 0xA5407eAE9Ba41422680e2e00537571bcC53efBfD;
     }
-
+    
+    /**
+    * @dev Return Curve Zap Address
+    */
+    function getCurveZapAddr() internal pure returns (address) {
+        return 0xFCBa3E75865d2d561BE8D220616520c171F12851;
+    }
+    
     /**
      * @dev Return Curve Token Address
      */
@@ -165,7 +176,7 @@ contract Resolver is CurveHelpers {
         unitAmt = getDepositUnitAmt(token, depositAmt, curveAmt, slippage);
     }
 
-    function getWithdrawAmount(address token, uint withdrawAmt, uint slippage)
+    function getWithdrawCurveAmount(address token, uint withdrawAmt, uint slippage)
         public
         view
         returns (uint curveAmt, uint unitAmt, uint virtualPrice)
@@ -178,6 +189,15 @@ contract Resolver is CurveHelpers {
         unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
     }
 
+    function getWithdrawTokenAmount(address token, uint curveAmt, uint slippage)
+        public
+        view
+        returns (uint tokenAmt, uint unitAmt, uint virtualPrice)
+    {
+        tokenAmt = ICurveZap(getCurveZapAddr()).calc_withdraw_one_coin(curveAmt, getTokenI(token));
+        virtualPrice = ICurve(getCurveSwapAddr()).get_virtual_price();
+        unitAmt = getWithdrawtUnitAmt(token, tokenAmt, curveAmt, slippage);
+    }
 
     function getPosition(
         address user
