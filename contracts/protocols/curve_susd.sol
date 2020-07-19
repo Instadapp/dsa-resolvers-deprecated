@@ -242,5 +242,5 @@ contract Resolver is CurveHelpers {
 
 
 contract InstaCurveResolver is Resolver {
-    string public constant name = "Curve-SUSD-Resolver-v1.2";
+    string public constant name = "Curve-SUSD-Resolver-v1.3";
 }

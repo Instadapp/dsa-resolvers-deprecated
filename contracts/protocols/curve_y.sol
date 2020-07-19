@@ -199,7 +199,7 @@ contract Resolver is CurveHelpers {
         ICurve curve = ICurve(getCurveSwapAddr());
         curveAmt = curve.calc_token_amount(amts, true);
         virtualPrice = curve.get_virtual_price();
-        unitAmt = getDepositUnitAmt(token, yAmt, curveAmt, slippage);
+        unitAmt = getDepositUnitAmt(token, depositAmt, curveAmt, slippage);
     }
 
     function getWithdrawAmount(address token, uint withdrawAmt, uint slippage)
@@ -214,7 +214,7 @@ contract Resolver is CurveHelpers {
         ICurve curve = ICurve(getCurveSwapAddr());
         curveAmt = curve.calc_token_amount(amts, false);
         virtualPrice = curve.get_virtual_price();
-        unitAmt = getWithdrawtUnitAmt(token, yAmt, curveAmt, slippage);
+        unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
     }
 
     function getWithdrawTokenAmount(address token, uint curveAmt, uint slippage)
