@@ -9,28 +9,34 @@ interface TokenInterface {
 
 interface IStakingRewards {
   function balanceOf(address) external view returns (uint256);
-  function totalSupply() external view returns (uint256) {
+  function totalSupply() external view returns (uint256);
   function earned(address) external view returns (uint256);
 }
 
-interface Staking {
-  function getStakingData(string calldata stakingName)
-  external
-  view
-  returns (
-    IStakingRewards stakingContract,
-    TokenInterface stakingToken,
-    bytes32 stakingType
-  );
+interface SynthetixMapping {
+  struct StakingData {
+    address stakingPool;
+    address stakingToken;
+  }
+  function stakingMapping(bytes32) external view returns(StakingData memory);
 }
 
 contract CurveStakingHelpers {
   /**
-  * @dev Return mapping contract Address
-  */
-  function getStakingAddr() internal virtual view returns (address) {
-    return 0x772590F33eD05b0E83553650BF9e75A04b337526;
+   * @dev Return InstaDApp Staking Mapping Addresses
+   */
+  function getMappingAddr() internal virtual view returns (address) {
+    return 0x772590F33eD05b0E83553650BF9e75A04b337526; // InstaMapping Address
   }
+
+  function stringToBytes32(string memory str) internal pure returns (bytes32 result) {
+    require(bytes(str).length != 0, "string-empty");
+    // solium-disable-next-line security/no-inline-assembly
+    assembly {
+      result := mload(add(str, 32))
+    }
+  }
+
 }
 
 contract Resolver is CurveStakingHelpers {
@@ -42,16 +48,20 @@ contract Resolver is CurveStakingHelpers {
     uint tokenBal,
     uint tokenTotalSupply
   ) {
-    Staking staking = Staking(getStakingAddr());
-    (IStakingRewards stakingContract, TokenInterface stakingToken, bytes32 stakingType) = staking.getStakingData(stakingPoolName);
+    bytes32 stakingType = stringToBytes32(stakingPoolName);
+    SynthetixMapping.StakingData memory stakingData = SynthetixMapping(getMappingAddr()).stakingMapping(stakingType);
+    require(stakingData.stakingPool != address(0) && stakingData.stakingToken != address(0), "Wrong Staking Name");
+    IStakingRewards stakingContract = IStakingRewards(stakingData.stakingPool);
+    TokenInterface stakingToken = TokenInterface(stakingData.stakingToken);
+
     stakedBal = stakingContract.balanceOf(user);
     stakedBal = stakingContract.totalSupply();
     rewardsEarned = stakingContract.earned(user);
     tokenBal = stakingToken.balanceOf(user);
     tokenBal = stakingToken.totalSupply();
   }
-}
 
+}
 
 contract InstaCurveStakingResolver is Resolver {
   string public constant name = "Synthetix-Staking-Resolver-v1";
