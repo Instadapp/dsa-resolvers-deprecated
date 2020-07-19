@@ -9,6 +9,7 @@ interface TokenInterface {
 
 interface IStakingRewards {
   function balanceOf(address) external view returns (uint256);
+  function totalSupply() external view returns (uint256) {
   function earned(address) external view returns (uint256);
 }
 
@@ -36,14 +37,18 @@ contract Resolver is CurveStakingHelpers {
 
   function getPosition(address user, string memory stakingPoolName) public view returns (
     uint stakedBal,
+    uint stakedTotalSupply,
     uint rewardsEarned,
-    uint tokenBal
+    uint tokenBal,
+    uint tokenTotalSupply
   ) {
     Staking staking = Staking(getStakingAddr());
     (IStakingRewards stakingContract, TokenInterface stakingToken, bytes32 stakingType) = staking.getStakingData(stakingPoolName);
     stakedBal = stakingContract.balanceOf(user);
+    stakedBal = stakingContract.totalSupply();
     rewardsEarned = stakingContract.earned(user);
     tokenBal = stakingToken.balanceOf(user);
+    tokenBal = stakingToken.totalSupply();
   }
 }
 
