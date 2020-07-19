@@ -13,6 +13,7 @@ interface ICurveZap {
 }
 
 interface YTokenInterface {
+    function balanceOf(address) external view returns (uint256);
     function getPricePerFullShare() external view returns (uint256 amount);
 }
 
@@ -226,6 +227,12 @@ contract Resolver is CurveHelpers {
         unitAmt = getWithdrawtUnitAmt(token, tokenAmt, curveAmt, slippage);
     }
 
+    struct yTokenData {
+        uint yPoolBal;
+        uint tokenPoolbal;
+        uint sharePrice;
+    }
+
     function getPosition(
         address user
     ) public view returns (
@@ -233,10 +240,10 @@ contract Resolver is CurveHelpers {
         uint totalSupply,
         uint virtualPrice,
         uint userShare,
-        uint poolyDaiBal,
-        uint poolyUsdcBal,
-        uint poolyUsdtBal,
-        uint poolyTusdBal,
+        yTokenData memory poolyDai,
+        yTokenData memory poolyUsdc,
+        yTokenData memory poolyUsdt,
+        yTokenData memory poolyTusd,
         uint stakedBal,
         uint rewardsEarned,
         uint yfiBal
@@ -247,10 +254,10 @@ contract Resolver is CurveHelpers {
         userShare = wdiv(userBal, totalSupply);
         ICurve curveContract = ICurve(getCurveSwapAddr());
         virtualPrice = curveContract.get_virtual_price();
-        poolyDaiBal = TokenInterface(curveContract.coins(0)).balanceOf(getCurveSwapAddr());
-        poolyUsdcBal = TokenInterface(curveContract.coins(1)).balanceOf(getCurveSwapAddr());
-        poolyUsdtBal = TokenInterface(curveContract.coins(2)).balanceOf(getCurveSwapAddr());
-        poolyTusdBal = TokenInterface(curveContract.coins(3)).balanceOf(getCurveSwapAddr());
+        poolyDai = getCurveYBalance(curveContract.coins(0));
+        poolyUsdc = getCurveYBalance(curveContract.coins(1));
+        poolyUsdt = getCurveYBalance(curveContract.coins(2));
+        poolyTusd = getCurveYBalance(curveContract.coins(3));
         // Staking Details.
         (stakedBal, rewardsEarned, yfiBal) = getStakingPosition(user);
     }
@@ -264,6 +271,13 @@ contract Resolver is CurveHelpers {
         stakedBal = stakingContract.balanceOf(user);
         rewardsEarned = stakingContract.earned(user);
         yfiBal = TokenInterface(getYFItoken()).balanceOf(user);
+    }
+
+    function getCurveYBalance(address tToken) public view returns (yTokenData memory ytoken) {
+        uint yPoolBal = YTokenInterface(tToken).balanceOf(getCurveSwapAddr());
+        uint sharePrice = YTokenInterface(tToken).getPricePerFullShare();
+        uint rawTokenPoolBal = wmul(yPoolBal, sharePrice);
+        return yTokenData(yPoolBal, rawTokenPoolBal, sharePrice);
     }
 }
 
