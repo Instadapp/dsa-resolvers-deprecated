@@ -110,6 +110,8 @@ contract Helpers is DSMath {
         uint borrowRate;
         uint price;
         uint liquidationRatio;
+        uint debtCelling;
+        uint totalDebt;
     }
 
     /**
@@ -161,6 +163,13 @@ contract Helpers is DSMath {
     function getColRatio(bytes32 ilk) internal view returns (uint ratio) {
         address spot = InstaMcdAddress(getMcdAddresses()).spot();
         (, ratio) = SpotLike(spot).ilks(ilk);
+    }
+
+    function getDebtCeiling(bytes32 ilk) internal view returns (uint debtCeiling, uint totalDebt) {
+        address vat = InstaMcdAddress(getMcdAddresses()).vat();
+        (uint totalArt,uint rate,,uint debtCeilingRad,) = VatLike(vat).ilks(ilk);
+        debtCeiling = debtCeilingRad / 10 ** 45;
+        totalDebt = rmul(totalArt, rate);
     }
 }
 
@@ -236,10 +245,13 @@ contract VaultResolver is Helpers {
 
         for (uint i = 0; i < name.length; i++) {
             bytes32 ilk = stringToBytes32(name[i]);
+            (uint debtCeiling, uint totalDebt) = getDebtCeiling(ilk);
             colInfo[i] = ColInfo(
                 getFee(ilk),
                 getColPrice(ilk),
-                getColRatio(ilk)
+                getColRatio(ilk),
+                debtCeiling,
+                totalDebt
             );
         }
         return colInfo;
@@ -265,5 +277,5 @@ contract DSRResolver is VaultResolver {
 
 
 contract InstaMakerResolver is DSRResolver {
-    string public constant name = "Maker-Resolver-v1";
+    string public constant name = "Maker-Resolver-v1.1";
 }
