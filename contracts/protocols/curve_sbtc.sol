@@ -3,12 +3,10 @@ pragma experimental ABIEncoderV2;
 
 interface ICurve {
     function get_virtual_price() external view returns (uint256 out);
-
     function coins(int128 tokenId) external view returns (address token);
-
     function calc_token_amount(uint256[3] calldata amounts, bool deposit) external view returns (uint256 amount);
-
     function get_dy(int128 sellTokenId, int128 buyTokenId, uint256 sellTokenAmt) external view returns (uint256 buyTokenAmt);
+    function calc_withdraw_one_coin(uint256 _token_amount, int128 i) external view returns (uint256 amount);
 }
 
 interface TokenInterface {
@@ -160,6 +158,17 @@ contract Resolver is CurveHelpers {
         unitAmt = getWithdrawtUnitAmt(token, withdrawAmt, curveAmt, slippage);
     }
 
+    function getWithdrawTokenAmount(address token, uint curveAmt, uint slippage)
+        public
+        view
+        returns (uint tokenAmt, uint unitAmt, uint virtualPrice)
+    {
+        ICurve curve = ICurve(getCurveSwapAddr());
+        tokenAmt = curve.calc_withdraw_one_coin(curveAmt, getTokenI(token));
+        virtualPrice = curve.get_virtual_price();
+        unitAmt = getWithdrawtUnitAmt(token, tokenAmt, curveAmt, slippage);
+    }
+
     function getPosition(
         address user
     ) public view returns (
@@ -184,6 +193,6 @@ contract Resolver is CurveHelpers {
 }
 
 
-contract InstaCurveResolver is Resolver {
-    string public constant name = "Curve-sBTC-Resolver-v1";
+contract InstaCurveSBTCResolver is Resolver {
+    string public constant name = "Curve-sBTC-Resolver-v1.1";
 }
