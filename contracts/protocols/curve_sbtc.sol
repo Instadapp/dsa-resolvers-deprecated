@@ -15,6 +15,10 @@ interface TokenInterface {
     function balanceOf(address) external view returns (uint);
 }
 
+interface IStakingRewards {
+  function balanceOf(address) external view returns (uint256);
+  function earned(address) external view returns (uint256);
+}
 
 contract DSMath {
 
@@ -55,6 +59,20 @@ contract CurveHelpers is DSMath {
      */
     function getCurveTokenAddr() internal pure returns (address) {
         return 0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3;
+    }
+
+    /**
+     * @dev Return Curve sBTC Staking Address
+     */
+    function getCurveStakingAddr() internal pure returns (address) {
+        return 0x13C1542A468319688B89E323fe9A3Be3A90EBb27;
+    }
+
+    /**
+    * @dev Return BPT Token address.
+    */
+    function getBPTAddr() internal pure returns (address) {
+        return 0x330416C863f2acCE7aF9C9314B422d24c672534a;
     }
 
     function getTokenI(address token) internal pure returns (int128 i) {
@@ -178,7 +196,10 @@ contract Resolver is CurveHelpers {
         uint userShare,
         uint poolRenBtcBal,
         uint poolWbtcBal,
-        uint poolSbtcBal
+        uint poolSbtcBal,
+        uint stakedBal,
+        uint rewardsEarned,
+        uint rewardBal
     ) {
         TokenInterface curveToken = TokenInterface(getCurveTokenAddr());
         userBal = curveToken.balanceOf(user);
@@ -189,10 +210,23 @@ contract Resolver is CurveHelpers {
         poolRenBtcBal = TokenInterface(curveContract.coins(0)).balanceOf(getCurveSwapAddr());
         poolWbtcBal = TokenInterface(curveContract.coins(1)).balanceOf(getCurveSwapAddr());
         poolSbtcBal = TokenInterface(curveContract.coins(2)).balanceOf(getCurveSwapAddr());
+
+        (stakedBal, rewardsEarned, rewardBal) = getStakingPosition(user);
+    }
+
+    function getStakingPosition(address user) public view returns (
+        uint stakedBal,
+        uint rewardsEarned,
+        uint rewardBal
+    ) {
+        IStakingRewards stakingContract = IStakingRewards(getCurveStakingAddr());
+        stakedBal = stakingContract.balanceOf(user);
+        rewardsEarned = stakingContract.earned(user);
+        rewardBal = TokenInterface(getBPTAddr()).balanceOf(user);
     }
 }
 
 
 contract InstaCurveSBTCResolver is Resolver {
-    string public constant name = "Curve-sBTC-Resolver-v1.1";
+    string public constant name = "Curve-sBTC-Resolver-v1.2";
 }
