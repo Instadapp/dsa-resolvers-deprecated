@@ -208,6 +208,58 @@ contract Resolver is OneSplitHelpers {
         buyAmt = returnAmounts[len - 2];
         unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
     }
+
+    struct MultiTokenPaths {
+        TokenInterface[] tokens;
+        uint[] distribution;
+        uint[] disableDexes;
+        uint[] destTokenEthPriceTimesGasPrices;
+    }
+
+    struct MultiTokenPathsBuyAmt {
+        uint buyAmt;
+        uint unitAmt;
+        uint[] distributions;
+        uint[] returnAmounts;
+        uint estimateGasAmount;
+    }
+
+    function getBuyAmountsMulti(
+        MultiTokenPaths[] memory multiTokenPaths,
+        uint sellAmt,
+        uint slippage
+    )
+    public
+    view
+    returns (MultiTokenPathsBuyAmt[] memory)
+    {
+        uint len = multiTokenPaths.length;
+        MultiTokenPathsBuyAmt[] memory data = new MultiTokenPathsBuyAmt[](len);
+        for (uint i = 0; i < len; i++) {
+            (
+                uint buyAmt,
+                uint unitAmt,
+                uint[] memory distributions,
+                uint[] memory returnAmounts,
+                uint estimateGasAmount
+            ) = getBuyAmountMultiWithGas(
+                multiTokenPaths[i].tokens,
+                sellAmt,
+                slippage,
+                multiTokenPaths[i].distribution,
+                multiTokenPaths[i].disableDexes,
+                multiTokenPaths[i].destTokenEthPriceTimesGasPrices
+            );
+            data[i] = MultiTokenPathsBuyAmt(
+               buyAmt,
+               unitAmt,
+               distributions,
+               returnAmounts,
+               estimateGasAmount
+            );
+        }
+        return data;
+    }
 }
 
 
