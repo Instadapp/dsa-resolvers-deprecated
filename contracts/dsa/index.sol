@@ -47,7 +47,6 @@ interface IndexInterface {
     function account(uint) external view returns (address);
     function check(uint) external view returns (address);
     function versionCount() external view returns (uint);
-
 }
 
 interface ConnectorsInterface {
@@ -74,6 +73,11 @@ interface ConnectorInterface {
     function name() external view returns (string memory);
 }
 
+interface GnosisFactoryInterface {
+    function proxyRuntimeCode() external pure returns (bytes memory);
+}
+
+
 contract Helpers {
     address public index;
     address public list;
@@ -81,6 +85,24 @@ contract Helpers {
     IndexInterface indexContract;
     ListInterface listContract;
     ConnectorsInterface connectorsContract;
+
+    GnosisFactoryInterface gnosisFactoryContract;
+
+    function getContractCode(address _addr) public view returns (bytes memory o_code) {
+        assembly {
+            // retrieve the size of the code, this needs assembly
+            let size := extcodesize(_addr)
+            // allocate output byte array - this could also be done without assembly
+            // by using o_code = new bytes(size)
+            o_code := mload(0x40)
+            // new "memory end" including padding
+            mstore(0x40, add(o_code, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            // store length in memory
+            mstore(o_code, size)
+            // actually retrieve the code, this needs assembly
+            extcodecopy(_addr, add(o_code, 0x20), 0, size)
+        }
+    }
 }
 
 contract AccountResolver is Helpers {
@@ -183,6 +205,24 @@ contract AccountResolver is Helpers {
     function isShield(address account) public view returns(bool shield) {
         shield = AccountInterface(account).sheild();
     }
+
+    function getAuthorityTypes(address[] memory authorities) public view returns(uint[] memory) {
+        bytes memory multiSigCode = gnosisFactoryContract.proxyRuntimeCode();
+        uint[] memory types = new uint[](authorities.length);
+        for (uint i = 0; i < authorities.length; i++) {
+            bytes memory _contractCode = getContractCode(authorities[i]);
+            if(keccak256(abi.encode(multiSigCode)) == keccak256(abi.encode(_contractCode))) {
+                types[i] = 1;
+            } else {
+                types[i] = 0;
+            }
+        }
+        return types;
+    }
+
+    function getAccountAuthoritiesTypes(address account) public view returns(uint[] memory) {
+        return getAuthorityTypes(getAccountAuthorities(account));
+    }
 }
 
 
@@ -256,12 +296,13 @@ contract InstaDSAResolver is ConnectorsResolver {
     string public constant name = "DSA-Resolver-v1";
     uint public constant version = 1;
 
-    constructor(address _index) public{
+    constructor(address _index, address gnosisFactory) public{
         index = _index;
         indexContract = IndexInterface(index);
         list = indexContract.list();
         listContract = ListInterface(list);
         connectors = indexContract.connectors(version);
         connectorsContract = ConnectorsInterface(connectors);
+        gnosisFactoryContract = GnosisFactoryInterface(gnosisFactory);
     }
 }
