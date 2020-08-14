@@ -215,7 +215,7 @@ contract Resolver is OneProtoHelpers {
                     disableDexes,
                     destTokenEthPriceTimesGasPrices
                     );
-        buyAmt = returnAmounts[len - 1];
+        buyAmt = returnAmounts[len - 2];
         unitAmt = getBuyUnitAmt(TokenInterface(tokens[len - 1]), buyAmt, TokenInterface(tokens[0]), sellAmt, slippage);
     }
 
