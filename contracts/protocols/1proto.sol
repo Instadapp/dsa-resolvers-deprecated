@@ -33,11 +33,11 @@ interface OneProtoInterface {
     );
 
     function getExpectedReturnWithGasMulti(
-        TokenInterface[] memory tokens,
+        TokenInterface[] calldata tokens,
         uint256 amount,
-        uint256[] memory parts,
-        uint256[] memory flags,
-        uint256[] memory destTokenEthPriceTimesGasPrices
+        uint256[] calldata parts,
+        uint256[] calldata flags,
+        uint256[] calldata destTokenEthPriceTimesGasPrices
     )
     external
     view
@@ -47,6 +47,11 @@ interface OneProtoInterface {
         uint256[] memory distribution
     );
 }
+
+interface OneProtoMappingInterface {
+    function oneProtoAddress() external view returns(address);
+}
+
 
 interface TokenInterface {
     function decimals() external view returns (uint);
@@ -93,12 +98,19 @@ contract Helpers is DSMath {
 }
 
 
-contract OneSplitHelpers is Helpers {
-    /**
-     * @dev Return 1Split Address
+contract OneProtoHelpers is Helpers {
+   /**
+     * @dev Return 1proto mapping Address
      */
-    function getOneProtoAddress() internal pure returns (address) {
-        return 0x50FDA034C0Ce7a8f7EFDAebDA7Aa7cA21CC1267e;
+    function getOneProtoMappingAddress() internal pure returns (address payable) {
+        return 0x8d0287AFa7755BB5f2eFe686AA8d4F0A7BC4AE7F;
+    }
+
+    /**
+     * @dev Return 1proto Address
+     */
+    function getOneProtoAddress() internal view returns (address payable) {
+        return payable(OneProtoMappingInterface(getOneProtoMappingAddress()).oneProtoAddress());
     }
 
     function getTokenDecimals(TokenInterface buy, TokenInterface sell) internal view returns(uint _buyDec, uint _sellDec){
@@ -130,7 +142,7 @@ contract OneSplitHelpers is Helpers {
 }
 
 
-contract Resolver is OneSplitHelpers {
+contract Resolver is OneProtoHelpers {
 
     function getBuyAmount(
         address buyAddr,
@@ -195,8 +207,6 @@ contract Resolver is OneSplitHelpers {
         uint estimateGasAmount
     ) {
         uint len = tokens.length;
-        TokenInterface _buyAddr = TokenInterface(tokens[len - 1]);
-        TokenInterface _sellAddr = TokenInterface(tokens[0]);
         (returnAmounts, estimateGasAmount, distributions) = OneProtoInterface(getOneProtoAddress())
                 .getExpectedReturnWithGasMulti(
                     tokens,
@@ -205,8 +215,8 @@ contract Resolver is OneSplitHelpers {
                     disableDexes,
                     destTokenEthPriceTimesGasPrices
                     );
-        buyAmt = returnAmounts[len - 2];
-        unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
+        buyAmt = returnAmounts[len - 1];
+        unitAmt = getBuyUnitAmt(TokenInterface(tokens[len - 1]), buyAmt, TokenInterface(tokens[0]), sellAmt, slippage);
     }
 
     struct MultiTokenPaths {
@@ -236,12 +246,19 @@ contract Resolver is OneSplitHelpers {
         uint len = multiTokenPaths.length;
         MultiTokenPathsBuyAmt[] memory data = new MultiTokenPathsBuyAmt[](len);
         for (uint i = 0; i < len; i++) {
+            data[i] = MultiTokenPathsBuyAmt({
+               buyAmt: 0,
+               unitAmt: 0,
+               distributions: new uint[](0),
+               returnAmounts: new uint[](0),
+               estimateGasAmount: 0
+            });
             (
-                uint buyAmt,
-                uint unitAmt,
-                uint[] memory distributions,
-                uint[] memory returnAmounts,
-                uint estimateGasAmount
+                data[i].buyAmt,
+                data[i].unitAmt,
+                data[i].distributions,
+                data[i].returnAmounts,
+                data[i].estimateGasAmount
             ) = getBuyAmountMultiWithGas(
                 multiTokenPaths[i].tokens,
                 sellAmt,
@@ -250,19 +267,12 @@ contract Resolver is OneSplitHelpers {
                 multiTokenPaths[i].disableDexes,
                 multiTokenPaths[i].destTokenEthPriceTimesGasPrices
             );
-            data[i] = MultiTokenPathsBuyAmt(
-               buyAmt,
-               unitAmt,
-               distributions,
-               returnAmounts,
-               estimateGasAmount
-            );
         }
         return data;
     }
 }
 
 
-contract InstaOneSplitResolver is Resolver {
+contract InstaOneProtoResolver is Resolver {
     string public constant name = "1Proto-Resolver-v1";
 }
