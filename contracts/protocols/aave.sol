@@ -14,6 +14,21 @@ interface AaveInterface {
         uint256 lastUpdateTimestamp,
         bool usageAsCollateralEnabled
     );
+
+    function getReserveConfigurationData(address _reserve)
+    external
+    view
+    returns (
+        uint256 ltv,
+        uint256 liquidationThreshold,
+        uint256 liquidationBonus,
+        address interestRateStrategyAddress,
+        bool usageAsCollateralEnabled,
+        bool borrowingEnabled,
+        bool stableBorrowRateEnabled,
+        bool isActive
+    );
+
     function getUserAccountData(address _user) external view returns (
         uint256 totalLiquidityETH,
         uint256 totalCollateralETH,
@@ -88,13 +103,15 @@ contract AaveHelpers is DSMath {
         return 0x506B0B2CF20FAA8f38a4E2B524EE43e1f4458Cc5; //kovan
     }
 
-    struct AaveTokenData {
+    struct AaveUserTokenData {
         uint tokenPrice;
         uint supplyBalance;
         uint borrowBalance;
         uint borrowFee;
         uint supplyRate;
         uint borrowRate;
+        uint borrowModal;
+        AaveTokenData aaveTokenData;
     }
 
     struct AaveUserData {
@@ -108,18 +125,44 @@ contract AaveHelpers is DSMath {
         uint healthFactor;
     }
 
+    struct AaveTokenData {
+        uint ltv;
+        uint threshold;
+        bool usageAsCollEnabled;
+        bool borrowEnabled;
+        bool stableBorrowEnabled;
+        bool isActive;
+    }
+
+
+
+    function collateralData(AaveInterface aave, address token) internal view returns(AaveTokenData memory) {
+        AaveTokenData memory aaveTokenData;
+        (
+            aaveTokenData.ltv,
+            aaveTokenData.threshold,
+            ,
+            ,
+            aaveTokenData.usageAsCollEnabled,
+            aaveTokenData.borrowEnabled,
+            aaveTokenData.stableBorrowEnabled,
+            aaveTokenData.isActive
+        ) = aave.getReserveConfigurationData(token);
+        return aaveTokenData;
+    }
+
     function getTokenData(
         AaveCoreInterface aaveCore,
         AaveInterface aave,
         address user,
         address token,
         uint price)
-    internal view returns(AaveTokenData memory tokenData) {
+    internal view returns(AaveUserTokenData memory tokenData) {
         (
             uint supplyBal,
             uint borrowBal,
             ,
-            ,
+            uint borrowModal,
             ,
             ,
             uint fee,
@@ -128,14 +171,17 @@ contract AaveHelpers is DSMath {
 
         uint supplyRate = aaveCore.getReserveCurrentLiquidityRate(token);
         uint borrowRate = aaveCore.getReserveCurrentVariableBorrowRate(token);
+        AaveTokenData memory aaveTokenData = collateralData(aave, token);
 
-        tokenData = AaveTokenData(
+        tokenData = AaveUserTokenData(
             price,
             supplyBal,
             borrowBal,
             fee,
             supplyRate,
-            borrowRate
+            borrowRate,
+            borrowModal,
+            aaveTokenData
         );
     }
 
@@ -166,12 +212,12 @@ contract AaveHelpers is DSMath {
 }
 
 contract Resolver is AaveHelpers {
-    function getPosition(address user, address[] memory tokens) public view returns(AaveTokenData[] memory, AaveUserData memory) {
+    function getPosition(address user, address[] memory tokens) public view returns(AaveUserTokenData[] memory, AaveUserData memory) {
         AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
         AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
         AaveCoreInterface aaveCore = AaveCoreInterface(AaveProvider.getLendingPoolCore());
 
-        AaveTokenData[] memory tokensData = new AaveTokenData[](tokens.length);
+        AaveUserTokenData[] memory tokensData = new AaveUserTokenData[](tokens.length);
         uint[] memory tokenPrices = AavePriceInterface(AaveProvider.getPriceOracle()).getAssetsPrices(tokens);
         for (uint i = 0; i < tokens.length; i++) {
             tokensData[i] = getTokenData(aaveCore, aave, user, tokens[i], tokenPrices[i]);
