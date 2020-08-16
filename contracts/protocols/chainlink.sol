@@ -51,7 +51,7 @@ contract Basic {
         require(chainlinkFeed != address(0), "chainlinkFeed-not-vaild");
         require(chainLinkMapping[tokenAddr] == address(0), "chainlinkFeed-already-added");
 
-        chainLinkMapping[tokenAddr] == chainlinkFeed;
+        chainLinkMapping[tokenAddr] = chainlinkFeed;
         emit LogAddChainLinkMapping(tokenAddr, chainlinkFeed);
     }
 
