@@ -1,7 +1,9 @@
 pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
 
 interface ChainLinkInterface {
     function latestAnswer() external view returns (int256);
+    function decimals() external view returns (uint256);
 }
 
 interface ConnectorsInterface {
@@ -12,11 +14,9 @@ interface IndexInterface {
   function master() external view returns (address);
 }
 
-
 contract Basic {
     address public constant connectors = 0xD6A602C01a023B98Ecfb29Df02FBA380d3B21E0c;
     address public constant instaIndex = 0x2971AdFa57b20E5a416aE5a708A8655A9c74f723;
-    address public constant ethAddr = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     uint public version = 1;
 
     modifier isChief {
@@ -27,83 +27,106 @@ contract Basic {
     }
 
     event LogAddChainLinkMapping(
-        address tokenAddr,
+        string tokenSymbol,
         address chainlinkFeed
     );
 
     event LogRemoveChainLinkMapping(
-        address tokenAddr,
+        string tokenSymbol,
         address chainlinkFeed
     );
 
-    event LogChangeGasPriceFeed(
-        address chainlinkFeed
-    );
-
-    mapping (address => address) public chainLinkMapping;
-    address public gasFastChainLink;
+    mapping (string => address) public chainLinkMapping;
 
     function _addChainLinkMapping(
-        address tokenAddr,
+        string memory token,
         address chainlinkFeed
     ) internal {
-        require(tokenAddr != address(0), "tokenAddr-not-vaild");
+        require(bytes(token).length > 0, "token-not-vaild");
         require(chainlinkFeed != address(0), "chainlinkFeed-not-vaild");
-        require(chainLinkMapping[tokenAddr] == address(0), "chainlinkFeed-already-added");
+        require(chainLinkMapping[token] == address(0), "chainlinkFeed-already-added");
 
-        chainLinkMapping[tokenAddr] = chainlinkFeed;
-        emit LogAddChainLinkMapping(tokenAddr, chainlinkFeed);
+        chainLinkMapping[token] = chainlinkFeed;
+        emit LogAddChainLinkMapping(token, chainlinkFeed);
     }
 
-    function _removeChainLinkMapping(address tokenAddr) internal {
-        require(tokenAddr != address(0), "tokenAddr-not-vaild");
-        require(chainLinkMapping[tokenAddr] != address(0), "chainlinkFeed-not-added-yet");
+    function _removeChainLinkMapping(string memory token) internal {
+        require(bytes(token).length > 0, "token-not-vaild");
+        require(chainLinkMapping[token] != address(0), "chainlinkFeed-not-added-yet");
 
-        emit LogRemoveChainLinkMapping(tokenAddr, chainLinkMapping[tokenAddr]);
-        delete chainLinkMapping[tokenAddr];
+        emit LogRemoveChainLinkMapping(token, chainLinkMapping[token]);
+        delete chainLinkMapping[token];
     }
 
     function addChainLinkMapping(
-        address[] memory tokensAddr,
+        string[] memory tokens,
         address[] memory chainlinkFeeds
     ) public isChief {
-        require(tokensAddr.length == chainlinkFeeds.length, "Lenght-not-same");
-        for (uint i = 0; i < tokensAddr.length; i++) {
-            _addChainLinkMapping(tokensAddr[i], chainlinkFeeds[i]);
+        require(tokens.length == chainlinkFeeds.length, "lenght-not-same");
+        for (uint i = 0; i < tokens.length; i++) {
+            _addChainLinkMapping(tokens[i], chainlinkFeeds[i]);
         }
     }
 
-    function removeChainLinkMapping(address[] memory tokensAddr) public isChief {
-        for (uint i = 0; i < tokensAddr.length; i++) {
-            _removeChainLinkMapping(tokensAddr[i]);
+    function removeChainLinkMapping(string[] memory tokens) public isChief {
+        for (uint i = 0; i < tokens.length; i++) {
+            _removeChainLinkMapping(tokens[i]);
         }
-    }
-
-    function changeGasMapping(address chainlinkFeed) public isChief {
-        require(chainlinkFeed != address(0), "chainlinkFeed-not-vaild");
-        require(chainlinkFeed != gasFastChainLink, "chainlinkFeed-is-same");
-        gasFastChainLink = chainlinkFeed;
-        emit LogChangeGasPriceFeed(gasFastChainLink);
     }
 }
 
 contract Resolver is Basic {
-    function getPrice(address[] memory tokens) public view returns (uint ethPriceInUsd, uint[] memory tokensPriceInETH) {
-        tokensPriceInETH = new uint[](tokens.length);
-        ethPriceInUsd = uint(ChainLinkInterface(chainLinkMapping[ethAddr]).latestAnswer());
+    struct PriceData {
+        uint price;
+        uint decimals;
+    }
+    function getPrice(string[] memory tokens)
+    public
+    view
+    returns (
+        PriceData memory ethPriceInUsd,
+        PriceData memory btcPriceInUsd,
+        PriceData[] memory tokensPriceInETH
+    ) {
+        tokensPriceInETH = new PriceData[](tokens.length);
         for (uint i = 0; i < tokens.length; i++) {
-            tokensPriceInETH[i] = uint(ChainLinkInterface(chainLinkMapping[tokens[i]]).latestAnswer());
+            ChainLinkInterface feedContract = ChainLinkInterface(chainLinkMapping[tokens[i]]);
+            if (address(feedContract) != address(0)) {
+                tokensPriceInETH[i] = PriceData({
+                    price: uint(feedContract.latestAnswer()),
+                    decimals: feedContract.decimals()
+                });
+            } else {
+                tokensPriceInETH[i] = PriceData({
+                    price: 0,
+                    decimals: 0
+                });
+            }
         }
+        ChainLinkInterface ethFeed = ChainLinkInterface(chainLinkMapping["ETH"]);
+        ChainLinkInterface btcFeed = ChainLinkInterface(chainLinkMapping["BTC"]);
+        ethPriceInUsd = PriceData({
+            price: uint(ethFeed.latestAnswer()),
+            decimals: ethFeed.decimals()
+        });
+
+        btcPriceInUsd = PriceData({
+            price: uint(btcFeed.latestAnswer()),
+            decimals: btcFeed.decimals()
+        });
     }
 
     function getGasPrice() public view returns (uint gasPrice) {
-        gasPrice = uint(ChainLinkInterface(gasFastChainLink).latestAnswer());
+        gasPrice = uint(ChainLinkInterface(chainLinkMapping["gasFast"]).latestAnswer());
     }
 }
 
 contract InstaChainLinkResolver is Resolver {
-    constructor (address[] memory tokensAddr, address[] memory chainlinkFeeds) public {
-        addChainLinkMapping(tokensAddr, chainlinkFeeds);
+    constructor (string[] memory tokens, address[] memory chainlinkFeeds) public {
+        require(tokens.length == chainlinkFeeds.length, "Lenght-not-same");
+        for (uint i = 0; i < tokens.length; i++) {
+            _addChainLinkMapping(tokens[i], chainlinkFeeds[i]);
+        }
     }
 
     string public constant name = "ChainLink-Resolver-v1";
