@@ -73,7 +73,7 @@ contract Basic {
         }
     }
 
-    function removeChainLinkMapping(address[] memory tokenAddr) public isChief {
+    function removeChainLinkMapping(address[] memory tokensAddr) public isChief {
         for (uint i = 0; i < tokensAddr.length; i++) {
             _removeChainLinkMapping(tokensAddr[i]);
         }
