@@ -86,7 +86,7 @@ contract Helpers {
     ListInterface listContract;
     ConnectorsInterface connectorsContract;
 
-    GnosisFactoryInterface gnosisFactoryContract;
+    GnosisFactoryInterface[] public gnosisFactoryContracts;
 
     function getContractCode(address _addr) public view returns (bytes memory o_code) {
         assembly {
@@ -205,22 +205,39 @@ contract AccountResolver is Helpers {
     function isShield(address account) public view returns(bool shield) {
         shield = AccountInterface(account).sheild();
     }
-
-    function getAuthorityTypes(address[] memory authorities) public view returns(uint[] memory) {
-        bytes memory multiSigCode = gnosisFactoryContract.proxyRuntimeCode();
-        uint[] memory types = new uint[](authorities.length);
+    
+    struct AuthType {
+        address owner;
+        uint authType;
+    }
+    
+    function getAuthorityTypes(address[] memory authorities) public view returns(AuthType[] memory) {
+        AuthType[] memory types = new AuthType[](authorities.length);
         for (uint i = 0; i < authorities.length; i++) {
             bytes memory _contractCode = getContractCode(authorities[i]);
-            if(keccak256(abi.encode(multiSigCode)) == keccak256(abi.encode(_contractCode))) {
-                types[i] = 1;
+            bool isSafe;
+            for (uint k = 0; k < gnosisFactoryContracts.length; k++) {
+                bytes memory multiSigCode = gnosisFactoryContracts[k].proxyRuntimeCode();
+                if(keccak256(abi.encode(multiSigCode)) == keccak256(abi.encode(_contractCode))) {
+                    isSafe = true;
+                }
+            }
+            if (isSafe) {
+                 types[i] = AuthType({
+                    owner: authorities[i],
+                    authType: 1
+                });
             } else {
-                types[i] = 0;
+                types[i] = AuthType({
+                    owner: authorities[i],
+                    authType: 0
+                });
             }
         }
         return types;
     }
 
-    function getAccountAuthoritiesTypes(address account) public view returns(uint[] memory) {
+    function getAccountAuthoritiesTypes(address account) public view returns(AuthType[] memory) {
         return getAuthorityTypes(getAccountAuthorities(account));
     }
 }
@@ -296,13 +313,17 @@ contract InstaDSAResolver is ConnectorsResolver {
     string public constant name = "DSA-Resolver-v1";
     uint public constant version = 1;
 
-    constructor(address _index, address gnosisFactory) public{
+    constructor(address _index, address[] memory _gnosisFactory) public{
         index = _index;
         indexContract = IndexInterface(index);
         list = indexContract.list();
         listContract = ListInterface(list);
         connectors = indexContract.connectors(version);
         connectorsContract = ConnectorsInterface(connectors);
-        gnosisFactoryContract = GnosisFactoryInterface(gnosisFactory);
+        for (uint i = 0; i < _gnosisFactory.length; i++) {
+            require(_gnosisFactory[i] != address(0), "address-not-vaild");
+            GnosisFactoryInterface gnosisFactoryContract = GnosisFactoryInterface(_gnosisFactory[i]);
+            gnosisFactoryContracts.push(gnosisFactoryContract);
+        }
     }
 }
