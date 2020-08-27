@@ -1,0 +1,25 @@
+{
+  "name": "dsa-resolvers",
+  "version": "1.0.0",
+  "description": "The smart contracts which simplifies read operations.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/InstaDApp/dsa-resolvers.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/InstaDApp/dsa-resolvers/issues"
+  },
+  "homepage": "https://github.com/InstaDApp/dsa-resolvers#readme",
+  "dependencies": {
+    "solc": "^0.6.0"
+  },
+  "devDependencies": {
+    "web3": "^1.2.9"
+  }
+}
