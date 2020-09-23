@@ -190,7 +190,7 @@ contract CompoundResolver is CompoundHelpers {
         tokenPrice = price / 10 ** (18 - decimals);
     }
 
-    function getCompound(address token, uint ethAmount) public view returns (uint) {
+    function getCompoundData(address token, uint ethAmount) public view returns (uint) {
         address cTokenAddr = InstaMapping(getMappingAddr()).cTokenMapping(token);
         if (cTokenAddr == address(0)) return 0;
         ComptrollerLensInterface comptroller = getComptroller();
@@ -341,7 +341,7 @@ contract DydxFlashloanResolver is DydxFlashloanHelper {
         routeData.dydx = token == getEthAddress() ? ethBalanceSolo : TokenInterface(token).balanceOf(getSoloAddress());
         routeData.dydx = wmul(routeData.dydx, 99 * 10 ** 16);
         routeData.maker = getMakerData(token, ethBalanceSolo);
-        routeData.compound = getCompound(token, ethBalanceSolo);
+        routeData.compound = getCompoundData(token, ethBalanceSolo);
         routeData.aave = getAaveData(token, ethBalanceSolo);
         return routeData;
     }
@@ -357,5 +357,5 @@ contract DydxFlashloanResolver is DydxFlashloanHelper {
 }
 
 contract InstaDydxFlashloanResolver is DydxFlashloanResolver {
-    string public constant name = "Dydx-flashloan-Resolver-v1";
+    string public constant name = "instapool-Resolver-v3";
 }
