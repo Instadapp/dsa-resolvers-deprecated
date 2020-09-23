@@ -251,10 +251,11 @@ contract AaveHelpers is CompoundResolver {
         AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
         AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
         AaveTokenData memory aaveToken = collateralData(aave, token);
+        AaveTokenData memory aaveEthToken = collateralData(aave, getEthAddress());
         if (!aaveToken.borrowEnabled) return 0;
         (uint tokenPrice, uint ethPrice) = getAavePrices(AaveProvider, token);
         uint ethColl = wmul(ethAmount, ethPrice);
-        uint cf = sub(aaveToken.ltv, 1) * (10 ** 16);
+        uint cf = sub(aaveEthToken.ltv, 1) * (10 ** 16);
         ethColl = wmul(ethColl, cf);
         uint debtCanBorrow = wdiv(ethColl, tokenPrice);
         return debtCanBorrow;
@@ -356,6 +357,6 @@ contract DydxFlashloanResolver is DydxFlashloanHelper {
     }
 }
 
-contract InstaDydxFlashloanResolver is DydxFlashloanResolver {
+contract InstaPoolResolver is DydxFlashloanResolver {
     string public constant name = "instapool-Resolver-v3";
 }
