@@ -59,6 +59,11 @@ interface AaveCoreInterface {
     function getReserveCurrentVariableBorrowRate(address _reserve) external view returns (uint256);
 }
 
+interface ChainLinkInterface {
+    function latestAnswer() external view returns (int256);
+    function decimals() external view returns (uint256);
+}
+
 contract DSMath {
 
     function add(uint x, uint y) internal pure returns (uint z) {
@@ -103,8 +108,17 @@ contract AaveHelpers is DSMath {
         return 0x506B0B2CF20FAA8f38a4E2B524EE43e1f4458Cc5; //kovan
     }
 
+    /**
+     * @dev get Chainlink ETH price feed Address
+    */
+    function getChainlinkEthFeed() internal pure returns (address) {
+        // return 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419; //mainnet
+        return 0x9326BFA02ADD2366b30bacB125260Af641031331; //kovan
+    }
+
     struct AaveUserTokenData {
-        uint tokenPrice;
+        uint tokenPriceInEth;
+        uint tokenPriceInUsd;
         uint supplyBalance;
         uint borrowBalance;
         uint borrowFee;
@@ -123,6 +137,7 @@ contract AaveHelpers is DSMath {
         uint currentLiquidationThreshold;
         uint ltv;
         uint healthFactor;
+        uint ethPriceInUsd;
     }
 
     struct AaveTokenData {
@@ -134,7 +149,24 @@ contract AaveHelpers is DSMath {
         bool isActive;
     }
 
+    struct TokenPrice {
+        uint priceInEth;
+        uint priceInUsd;
+    }
 
+
+    function getTokensPrices(AaveProviderInterface AaveProvider, address[] memory tokens) 
+    internal view returns(TokenPrice[] memory tokenPrices, uint ethPrice) {
+        uint[] memory _tokenPrices = AavePriceInterface(AaveProvider.getPriceOracle()).getAssetsPrices(tokens);
+        ethPrice = uint(ChainLinkInterface(getChainlinkEthFeed()).latestAnswer());
+        tokenPrices = new TokenPrice[](_tokenPrices.length);
+        for (uint i = 0; i < _tokenPrices.length; i++) {
+            tokenPrices[i] = TokenPrice(
+                _tokenPrices[i],
+                wmul(_tokenPrices[i], uint(ethPrice) * 10 ** 10)
+            );
+        }
+    }
 
     function collateralData(AaveInterface aave, address token) internal view returns(AaveTokenData memory) {
         AaveTokenData memory aaveTokenData;
@@ -156,7 +188,8 @@ contract AaveHelpers is DSMath {
         AaveInterface aave,
         address user,
         address token,
-        uint price)
+        uint priceInEth,
+        uint priceInUsd)
     internal view returns(AaveUserTokenData memory tokenData) {
         (
             uint supplyBal,
@@ -174,7 +207,8 @@ contract AaveHelpers is DSMath {
         AaveTokenData memory aaveTokenData = collateralData(aave, token);
 
         tokenData = AaveUserTokenData(
-            price,
+            priceInEth,
+            priceInUsd,
             supplyBal,
             borrowBal,
             fee,
@@ -185,7 +219,7 @@ contract AaveHelpers is DSMath {
         );
     }
 
-    function getUserData(AaveInterface aave, address user)
+    function getUserData(AaveInterface aave, address user, uint ethPrice)
     internal view returns (AaveUserData memory userData) {
         (
             uint totalSupplyETH,
@@ -206,7 +240,8 @@ contract AaveHelpers is DSMath {
             availableBorrowsETH,
             currentLiquidationThreshold,
             ltv,
-            healthFactor
+            healthFactor,
+            ethPrice
         );
     }
 }
@@ -218,14 +253,14 @@ contract Resolver is AaveHelpers {
         AaveCoreInterface aaveCore = AaveCoreInterface(AaveProvider.getLendingPoolCore());
 
         AaveUserTokenData[] memory tokensData = new AaveUserTokenData[](tokens.length);
-        uint[] memory tokenPrices = AavePriceInterface(AaveProvider.getPriceOracle()).getAssetsPrices(tokens);
+        (TokenPrice[] memory tokenPrices, uint ethPrice) = getTokensPrices(AaveProvider, tokens);
         for (uint i = 0; i < tokens.length; i++) {
-            tokensData[i] = getTokenData(aaveCore, aave, user, tokens[i], tokenPrices[i]);
+            tokensData[i] = getTokenData(aaveCore, aave, user, tokens[i], tokenPrices[i].priceInEth, tokenPrices[i].priceInUsd);
         }
-        return (tokensData, getUserData(aave, user));
+        return (tokensData, getUserData(aave, user, ethPrice));
     }
 }
 
 contract InstaAaveResolver is Resolver {
-    string public constant name = "Aave-Resolver-v1";
+    string public constant name = "Aave-Resolver-v1.1";
 }
