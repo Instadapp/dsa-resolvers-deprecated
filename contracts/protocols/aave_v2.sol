@@ -188,17 +188,6 @@ contract AaveHelpers is DSMath {
 
         tokenData.tokenPrice = price;
         tokenData.aaveTokenData = aaveTokenData;
-
-        // tokenData = AaveUserTokenData(
-        //     price,
-        //     supplyBal,
-        //     stableDebtBal,
-        //     variableDebtBal,
-        //     liquidityRate,
-        //     stableBorrowRate,
-        //     variableBorrowRate,
-        //     aaveTokenData
-        // );
     }
 
     function getUserData(AaveLendingPool aave, address user)
@@ -226,9 +215,6 @@ contract AaveHelpers is DSMath {
 contract Resolver is AaveHelpers {
     function getPosition(address user, address[] memory tokens) public view returns(AaveUserTokenData[] memory, AaveUserData memory) {
         AaveAddressProvider addrProvider = AaveAddressProvider(getAaveAddressProvider());
-        // AavePriceOracle priceOracle = AavePriceOracle(addrProvider.getPriceOracle());
-        // AaveProtocolDataProvider aaveData = AaveProtocolDataProvider(getAaveProtocolDataProvider());
-        // AaveLendingPool aave = AaveLendingPool(addrProvider.getLendingPool());
 
         AaveUserTokenData[] memory tokensData = new AaveUserTokenData[](tokens.length);
         uint[] memory tokenPrices = AavePriceOracle(addrProvider.getPriceOracle()).getAssetsPrices(tokens);
