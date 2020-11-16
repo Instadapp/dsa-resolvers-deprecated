@@ -85,22 +85,6 @@ contract UniswapHelpers is Helpers {
         _sell = sell == getEthAddr() ? TokenInterface(getAddressWETH()) : TokenInterface(sell);
     }
 
-    function checkPaths(
-        IUniswapV2Router02 router,
-        address[] memory paths
-    ) internal view returns(bool isValid) {
-        isValid = true;
-        for (uint i; i < paths.length - 1; i++) {
-            if (paths[i] == paths[i + 1]) {
-                return false;
-            }
-            address pair = IUniswapV2Factory(router.factory()).getPair(paths[i], paths[i + 1]);
-            if (pair == address(0)) {
-                return false;
-            }
-        }
-    }
-
     function getExpectedBuyAmt(
         address buyAddr,
         address sellAddr,
@@ -188,40 +172,6 @@ contract UniswapHelpers is Helpers {
         uint share = wdiv(uniAmt, uniToken.totalSupply());
         amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
         amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
-    }
-
-    function _getExpectedBuyAmtByPath(
-        address[] memory paths,
-        uint sellAmt
-    ) internal view returns(uint buyAmt) {
-        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
-
-        if (checkPaths(router, paths)) {
-            uint[] memory amts = router.getAmountsOut(
-                sellAmt,
-                paths
-            );
-            buyAmt = amts[amts.length - 1];
-        } else {
-            buyAmt = 0;
-        }
-    }
-
-    function _getExpectedSellAmtByPath(
-        address[] memory paths,
-        uint buyAmt
-    ) internal view returns(uint sellAmt) {
-        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
-
-        if (checkPaths(router, paths)) {
-           uint[] memory amts = router.getAmountsIn(
-                buyAmt,
-                paths
-            );
-            sellAmt = amts[0];
-        } else {
-            sellAmt = uint(-1);
-        }
     }
 }
 
@@ -342,134 +292,6 @@ contract Resolver is UniswapHelpers {
             }
         }
         return poolData;
-    }
-
-    function getOptimalSellPath(
-        address buyAddr,
-        address sellAddr,
-        address[] memory tokens,
-        uint sellAmt,
-        uint slippage
-    ) public view returns (address[] memory paths, uint buyAmt, uint unitAmt)
-    {
-        (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
-
-        address[] memory _path = new address[](2);
-        _path[0] = address(_sellAddr);
-        _path[1] = address(_buyAddr);
-
-        paths = _path;
-        buyAmt = _getExpectedBuyAmtByPath(_path, sellAmt);
-
-        _path = new address[](3);
-        _path[0] = address(_sellAddr);
-        _path[2] = address(_buyAddr);
-
-        uint i;
-        uint j;
-        uint _buyAmt;
-
-        for(i = 0; i < tokens.length; i++) {
-            _path[1] = tokens[i];
-
-            _buyAmt = _getExpectedBuyAmtByPath(_path, sellAmt);
-
-            if (_buyAmt > buyAmt) {
-                buyAmt = _buyAmt;
-                paths = new address[](3);
-                paths[0] = _path[0];
-                paths[1] = _path[1];
-                paths[2] = _path[2];
-            }
-        }
-
-        _path = new address[](4);
-        _path[0] = address(_sellAddr);
-        _path[3] = address(_buyAddr);
-
-        for(i = 0; i < tokens.length; i++) {
-            for(j = 0; j < tokens.length; j++) {
-                _path[1] = tokens[i];
-                _path[2] = tokens[j];
-
-                _buyAmt = _getExpectedBuyAmtByPath(_path, sellAmt);
-
-                if (_buyAmt > buyAmt) {
-                    buyAmt = _buyAmt;
-                    paths = new address[](4);
-                    paths[0] = _path[0];
-                    paths[1] = _path[1];
-                    paths[2] = _path[2];
-                    paths[3] = _path[3];
-                }
-            }
-        }
-
-        unitAmt = getBuyUnitAmt(_buyAddr, buyAmt, _sellAddr, sellAmt, slippage);
-    }
-
-    function getOptimalBuyPath(
-        address buyAddr,
-        address sellAddr,
-        address[] memory tokens,
-        uint buyAmt,
-        uint slippage
-    ) public view returns (address[] memory paths, uint sellAmt, uint unitAmt)
-    {
-        (TokenInterface _buyAddr, TokenInterface _sellAddr) = changeEthAddress(buyAddr, sellAddr);
-
-        address[] memory _path = new address[](2);
-        _path[0] = address(_sellAddr);
-        _path[1] = address(_buyAddr);
-
-        paths = _path;
-        sellAmt = _getExpectedSellAmtByPath(_path, buyAmt);
-
-        _path = new address[](3);
-        _path[0] = address(_sellAddr);
-        _path[2] = address(_buyAddr);
-
-        uint i;
-        uint j;
-        uint _sellAmt;
-
-        for(i = 0; i < tokens.length; i++) {
-            _path[1] = tokens[i];
-
-            _sellAmt = _getExpectedSellAmtByPath(_path, buyAmt);
-
-            if (_sellAmt < sellAmt) {
-                sellAmt = _sellAmt;
-                paths = new address[](3);
-                paths[0] = _path[0];
-                paths[1] = _path[1];
-                paths[2] = _path[2];
-            }
-        }
-
-        _path = new address[](4);
-        _path[0] = address(_sellAddr);
-        _path[3] = address(_buyAddr);
-
-        for(i = 0; i < tokens.length; i++) {
-            for(j = 0; j < tokens.length; j++) {
-                _path[1] = tokens[i];
-                _path[2] = tokens[j];
-
-                _sellAmt = _getExpectedSellAmtByPath(_path, buyAmt);
-
-                if (_sellAmt < sellAmt) {
-                    sellAmt = _sellAmt;
-                    paths = new address[](4);
-                    paths[0] = _path[0];
-                    paths[1] = _path[1];
-                    paths[2] = _path[2];
-                    paths[3] = _path[3];
-                }
-            }
-        }
-
-        unitAmt = getSellUnitAmt(_sellAddr, sellAmt, _buyAddr, buyAmt, slippage);
     }
 }
 
