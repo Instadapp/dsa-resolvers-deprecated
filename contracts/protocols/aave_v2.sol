@@ -276,7 +276,7 @@ contract Resolver is AaveHelpers {
         }
 
         AaveUserTokenData[] memory tokensData = new AaveUserTokenData[](length);
-        (TokenPrice[] memory tokenPrices, uint ethPrice) = getTokensPrices(addrProvider, tokens);
+        (TokenPrice[] memory tokenPrices, uint ethPrice) = getTokensPrices(addrProvider, _tokens);
 
         for (uint i = 0; i < length; i++) {
             tokensData[i] = getTokenData(
@@ -293,5 +293,5 @@ contract Resolver is AaveHelpers {
 }
 
 contract InstaAaveV2Resolver is Resolver {
-    string public constant name = "Aave-v2-Resolver";
+    string public constant name = "AaveV2-Resolver-v1.1";
 }
