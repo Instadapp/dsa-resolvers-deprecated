@@ -125,6 +125,7 @@ contract AaveHelpers is DSMath {
         uint supplyRate;
         uint borrowRate;
         uint borrowModal;
+        bool isCollateral;
         AaveTokenData aaveTokenData;
     }
 
@@ -200,6 +201,7 @@ contract AaveHelpers is DSMath {
             ,
             uint fee,
             ,,
+            bool isCollateral
         ) = aave.getUserReserveData(token, user);
 
         uint supplyRate = aaveCore.getReserveCurrentLiquidityRate(token);
@@ -215,6 +217,7 @@ contract AaveHelpers is DSMath {
             supplyRate,
             borrowRate,
             borrowModal,
+            isCollateral,
             aaveTokenData
         );
     }
