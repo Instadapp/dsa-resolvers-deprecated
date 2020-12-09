@@ -295,5 +295,5 @@ contract Resolver is AaveHelpers {
 }
 
 contract InstaAaveV2Resolver is Resolver {
-    string public constant name = "AaveV2-Resolver-v1.1";
+    string public constant name = "AaveV2-Resolver-v1.2";
 }
