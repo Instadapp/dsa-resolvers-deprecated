@@ -57,6 +57,7 @@ interface AavePriceInterface {
 interface AaveCoreInterface {
     function getReserveCurrentLiquidityRate(address _reserve) external view returns (uint256);
     function getReserveCurrentVariableBorrowRate(address _reserve) external view returns (uint256);
+    function getReserveATokenAddress(address _reserve) external view returns (address);
 }
 
 interface VatLike {
@@ -250,6 +251,9 @@ contract AaveHelpers is CompoundResolver {
     public view returns (uint) {
         AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
         AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
+        AaveCoreInterface aaveCore = AaveCoreInterface(AaveProvider.getLendingPoolCore());
+        if (aaveCore.getReserveATokenAddress(token) == address(0)) return 0;
+        
         AaveTokenData memory aaveToken = collateralData(aave, token);
         AaveTokenData memory aaveEthToken = collateralData(aave, getEthAddress());
         if (!aaveToken.borrowEnabled) return 0;
