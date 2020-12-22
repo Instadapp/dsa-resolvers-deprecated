@@ -20,9 +20,9 @@ contract Resolver {
 
     function getUnipairInfo(
         address owner,
-        address[] memory tknAddress
+        address[] memory lpTknAddress
     ) public view returns (uint[] memory, UnipairInfo[] memory) {
-        uint _length = tknAddress.length;
+        uint _length = lpTknAddress.length;
 
         uint[] memory tokensBal = new uint[](_length);
         UnipairInfo[] memory unipair = new UnipairInfo[](_length);
@@ -31,7 +31,7 @@ contract Resolver {
         address ethAddr = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
         for (uint i = 0; i < _length; i++) {
-            UnipairInterface lp = UnipairInterface(tknAddress[i]);
+            UnipairInterface lp = UnipairInterface(lpTknAddress[i]);
 
             tokensBal[i] = lp.balanceOf(owner);
 
