@@ -534,13 +534,18 @@ contract Resolver is UniswapHelpers {
     }
 
     struct PoolData {
+        address tokenA;
+        address tokenB;
+        address lpAddress;
+        uint reserveA;
+        uint reserveB;
         uint tokenAShareAmt;
         uint tokenBShareAmt;
-        uint uniAmt;
+        uint lpAmount;
         uint totalSupply;
     }
 
-    function getPosition(
+    function getPositionByPair(
         address owner,
         TokenPair[] memory tokenPairs
     ) public view returns (PoolData[] memory)
@@ -555,19 +560,59 @@ contract Resolver is UniswapHelpers {
                 address(tokenB)
             );
             if (exchangeAddr != address(0)) {
-                TokenInterface uniToken = TokenInterface(exchangeAddr);
-                uint uniAmt = uniToken.balanceOf(owner);
-                uint totalSupply = uniToken.totalSupply();
-                uint share = wdiv(uniAmt, totalSupply);
-                uint amtA = wmul(tokenA.balanceOf(exchangeAddr), share);
-                uint amtB = wmul(tokenB.balanceOf(exchangeAddr), share);
+                IUniswapV2Pair lpToken = IUniswapV2Pair(exchangeAddr);
+                (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+                (reserveA, reserveB) = lpToken.token0() == address(tokenA) ? (reserveA, reserveB) : (reserveB, reserveA);
+        
+                uint lpAmount = lpToken.balanceOf(owner);
+                uint totalSupply = lpToken.totalSupply();
+                uint share = wdiv(lpAmount, totalSupply);
+                uint amtA = wmul(reserveA, share);
+                uint amtB = wmul(reserveB, share);
                 poolData[i] = PoolData(
+                    tokenPairs[i].tokenA,
+                    tokenPairs[i].tokenB,
+                    address(lpToken),
+                    reserveA,
+                    reserveB,
                     amtA,
                     amtB,
-                    uniAmt,
+                    lpAmount,
                     totalSupply
                 );
             }
+        }
+        return poolData;
+    }
+
+    function getPosition(
+        address owner,
+        address[] memory lpTokens
+    ) public view returns (PoolData[] memory)
+    {
+        uint _len = lpTokens.length;
+        PoolData[] memory poolData = new PoolData[](_len);
+        for (uint i = 0; i < _len; i++) {
+            IUniswapV2Pair lpToken = IUniswapV2Pair(lpTokens[i]);
+            (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+            (address tokenA, address tokenB) = (lpToken.token0(), lpToken.token1());
+    
+            uint lpAmount = lpToken.balanceOf(owner);
+            uint totalSupply = lpToken.totalSupply();
+            uint share = wdiv(lpAmount, totalSupply);
+            uint amtA = wmul(reserveA, share);
+            uint amtB = wmul(reserveB, share);
+            poolData[i] = PoolData(
+                tokenA,
+                tokenB,
+                address(lpToken),
+                reserveA,
+                reserveB,
+                amtA,
+                amtB,
+                lpAmount,
+                totalSupply
+            );
         }
         return poolData;
     }
