@@ -6,6 +6,7 @@ interface IUniswapV2Router02 {
     function WETH() external pure returns (address);
     function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
+    function quote(uint amountA, uint reserveA, uint reserveB) external pure returns (uint amountB);
 }
 
 interface IUniswapV2Factory {
@@ -19,6 +20,229 @@ interface TokenInterface {
     function transfer(address, uint) external returns (bool);
     function decimals() external view returns (uint);
     function totalSupply() external view returns (uint);
+}
+
+interface IUniswapV2Pair {
+  function balanceOf(address owner) external view returns (uint);
+  function totalSupply() external view returns (uint);
+
+
+  function approve(address spender, uint value) external returns (bool);
+  function transfer(address to, uint value) external returns (bool);
+  function transferFrom(address from, address to, uint value) external returns (bool);
+
+  function factory() external view returns (address);
+  function token0() external view returns (address);
+  function token1() external view returns (address);
+  function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+  function price0CumulativeLast() external view returns (uint);
+  function price1CumulativeLast() external view returns (uint);
+}
+
+
+/**
+ * @dev Wrappers over Solidity's arithmetic operations with added overflow
+ * checks.
+ *
+ * Arithmetic operations in Solidity wrap on overflow. This can easily result
+ * in bugs, because programmers usually assume that an overflow raises an
+ * error, which is the standard behavior in high level programming languages.
+ * `SafeMath` restores this intuition by reverting the transaction when an
+ * operation overflows.
+ *
+ * Using this library instead of the unchecked operations eliminates an entire
+ * class of bugs, so it's recommended to use it always.
+ */
+library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     *
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts with custom message when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
+    }
+}
+
+
+library Babylonian {
+    // credit for this implementation goes to
+    // https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
+    function sqrt(uint256 x) internal pure returns (uint256) {
+        if (x == 0) return 0;
+        // this block is equivalent to r = uint256(1) << (BitMath.mostSignificantBit(x) / 2);
+        // however that code costs significantly more gas
+        uint256 xx = x;
+        uint256 r = 1;
+        if (xx >= 0x100000000000000000000000000000000) {
+            xx >>= 128;
+            r <<= 64;
+        }
+        if (xx >= 0x10000000000000000) {
+            xx >>= 64;
+            r <<= 32;
+        }
+        if (xx >= 0x100000000) {
+            xx >>= 32;
+            r <<= 16;
+        }
+        if (xx >= 0x10000) {
+            xx >>= 16;
+            r <<= 8;
+        }
+        if (xx >= 0x100) {
+            xx >>= 8;
+            r <<= 4;
+        }
+        if (xx >= 0x10) {
+            xx >>= 4;
+            r <<= 2;
+        }
+        if (xx >= 0x8) {
+            r <<= 1;
+        }
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1;
+        r = (r + x / r) >> 1; // Seven iterations should be enough
+        uint256 r1 = x / r;
+        return (r < r1 ? r : r1);
+    }
 }
 
 contract DSMath {
@@ -58,11 +282,14 @@ contract Helpers is DSMath {
 }
 
 contract UniswapHelpers is Helpers {
+    using SafeMath for uint256;
+
     /**
      * @dev Return WETH address
      */
     function getAddressWETH() internal pure returns (address) {
-        return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+        return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // mainnet
+        // return 0xd0A1E359811322d97991E03f863a0C30C2cF029C; // kovan
     }
 
     /**
@@ -173,6 +400,20 @@ contract UniswapHelpers is Helpers {
         amtA = wmul(_tokenA.balanceOf(exchangeAddr), share);
         amtB = wmul(_tokenB.balanceOf(exchangeAddr), share);
     }
+
+    function calculateSwapInAmount(uint256 reserveIn, uint256 userIn)
+        internal
+        pure
+        returns (uint256)
+    {
+         return
+            Babylonian
+                .sqrt(
+                    reserveIn.mul(
+                        userIn.mul(3988000).add(reserveIn.mul(3988009))
+                    )
+                ).sub(reserveIn.mul(1997)) / 1994;
+    }
 }
 
 
@@ -197,18 +438,55 @@ contract Resolver is UniswapHelpers {
     function getDepositAmount(
         address tokenA,
         address tokenB,
-        uint amtA
-    ) public view returns (uint amtB, uint unitAmt)
-    {
+        uint amountA,
+        uint slippageA,
+        uint slippageB
+    ) public view returns (uint amountB, uint uniAmount, uint amountAMin, uint amountBMin)
+    {       
         (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
         IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
-        address exchangeAddr = IUniswapV2Factory(router.factory()).getPair(address(_tokenA), address(_tokenB));
-        require(exchangeAddr != address(0), "pair-not-found.");
-        uint _amtA18 = convertTo18(_tokenA.decimals(), _tokenA.balanceOf(exchangeAddr));
-        uint _amtB18 = convertTo18(_tokenB.decimals(), _tokenB.balanceOf(exchangeAddr));
-        unitAmt = wdiv(_amtB18, _amtA18);
-        amtB = wmul(unitAmt, convertTo18(_tokenA.decimals(), amtA));
-        amtB = convert18ToDec(_tokenB.decimals(), amtB);
+        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+        IUniswapV2Pair lpToken = IUniswapV2Pair(factory.getPair(address(_tokenA), address(_tokenB)));
+        require(address(lpToken) != address(0), "No-exchange-address");
+        
+        (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+        (reserveA, reserveB) = lpToken.token0() == address(_tokenA) ? (reserveA, reserveB) : (reserveB, reserveA);
+        
+        amountB = router.quote(amountA, reserveA, reserveB);
+         
+        uniAmount= mul(amountA, lpToken.totalSupply());
+        uniAmount= uniAmount / reserveA;
+        
+        amountAMin = wmul(sub(WAD, slippageA), amountA);
+        amountBMin = wmul(sub(WAD, slippageB), amountB);
+        
+    }
+
+    function getSingleDepositAmount(
+        address tokenA,
+        address tokenB,
+        uint amountA,
+        uint slippage
+    ) public view returns (uint amtA, uint amtB, uint uniAmt, uint minUniAmt)
+    {       
+        (TokenInterface _tokenA, TokenInterface _tokenB) = changeEthAddress(tokenA, tokenB);
+        IUniswapV2Router02 router = IUniswapV2Router02(getUniswapAddr());
+        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+        IUniswapV2Pair lpToken = IUniswapV2Pair(factory.getPair(address(_tokenA), address(_tokenB)));
+        require(address(lpToken) != address(0), "No-exchange-address");
+        
+        (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+        uint256 reserveIn = lpToken.token0() == address(_tokenA) ? reserveA : reserveB;
+
+        uint256 swapAmtA = calculateSwapInAmount(reserveIn, amountA);
+
+        amtB = getExpectedBuyAmt(address(_tokenB), address(_tokenA), swapAmtA);
+        amtA = sub(amountA, swapAmtA);
+
+        uniAmt = mul(amtA, lpToken.totalSupply());
+        uniAmt = uniAmt / add(reserveIn, swapAmtA);
+
+        minUniAmt = wmul(sub(WAD, slippage), uniAmt);
     }
 
     function getDepositAmountNewPool(
@@ -256,13 +534,18 @@ contract Resolver is UniswapHelpers {
     }
 
     struct PoolData {
+        address tokenA;
+        address tokenB;
+        address lpAddress;
+        uint reserveA;
+        uint reserveB;
         uint tokenAShareAmt;
         uint tokenBShareAmt;
-        uint uniAmt;
+        uint lpAmount;
         uint totalSupply;
     }
 
-    function getPosition(
+    function getPositionByPair(
         address owner,
         TokenPair[] memory tokenPairs
     ) public view returns (PoolData[] memory)
@@ -277,19 +560,59 @@ contract Resolver is UniswapHelpers {
                 address(tokenB)
             );
             if (exchangeAddr != address(0)) {
-                TokenInterface uniToken = TokenInterface(exchangeAddr);
-                uint uniAmt = uniToken.balanceOf(owner);
-                uint totalSupply = uniToken.totalSupply();
-                uint share = wdiv(uniAmt, totalSupply);
-                uint amtA = wmul(tokenA.balanceOf(exchangeAddr), share);
-                uint amtB = wmul(tokenB.balanceOf(exchangeAddr), share);
+                IUniswapV2Pair lpToken = IUniswapV2Pair(exchangeAddr);
+                (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+                (reserveA, reserveB) = lpToken.token0() == address(tokenA) ? (reserveA, reserveB) : (reserveB, reserveA);
+        
+                uint lpAmount = lpToken.balanceOf(owner);
+                uint totalSupply = lpToken.totalSupply();
+                uint share = wdiv(lpAmount, totalSupply);
+                uint amtA = wmul(reserveA, share);
+                uint amtB = wmul(reserveB, share);
                 poolData[i] = PoolData(
+                    tokenPairs[i].tokenA,
+                    tokenPairs[i].tokenB,
+                    address(lpToken),
+                    reserveA,
+                    reserveB,
                     amtA,
                     amtB,
-                    uniAmt,
+                    lpAmount,
                     totalSupply
                 );
             }
+        }
+        return poolData;
+    }
+
+    function getPosition(
+        address owner,
+        address[] memory lpTokens
+    ) public view returns (PoolData[] memory)
+    {
+        uint _len = lpTokens.length;
+        PoolData[] memory poolData = new PoolData[](_len);
+        for (uint i = 0; i < _len; i++) {
+            IUniswapV2Pair lpToken = IUniswapV2Pair(lpTokens[i]);
+            (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
+            (address tokenA, address tokenB) = (lpToken.token0(), lpToken.token1());
+    
+            uint lpAmount = lpToken.balanceOf(owner);
+            uint totalSupply = lpToken.totalSupply();
+            uint share = wdiv(lpAmount, totalSupply);
+            uint amtA = wmul(reserveA, share);
+            uint amtB = wmul(reserveB, share);
+            poolData[i] = PoolData(
+                tokenA,
+                tokenB,
+                address(lpToken),
+                reserveA,
+                reserveB,
+                amtA,
+                amtB,
+                lpAmount,
+                totalSupply
+            );
         }
         return poolData;
     }
@@ -297,6 +620,6 @@ contract Resolver is UniswapHelpers {
 
 
 contract InstaUniswapV2Resolver is Resolver {
-    string public constant name = "UniswapV2-Resolver-v1";
+    string public constant name = "UniswapV2-Resolver-v1.1";
 }
 
