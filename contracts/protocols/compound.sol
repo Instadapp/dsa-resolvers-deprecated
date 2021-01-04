@@ -22,7 +22,7 @@ interface OrcaleComp {
 }
 
 interface ComptrollerLensInterface {
-    function markets(address) external view returns (bool, uint);
+    function markets(address) external view returns (bool, uint, bool);
     function getAccountLiquidity(address) external view returns (uint, uint, uint);
     function claimComp(address) external;
     function compAccrued(address) external view returns (uint);
@@ -114,6 +114,8 @@ contract Helpers is DSMath {
         uint borrowBalanceStoredUser;
         uint supplyRatePerBlock;
         uint borrowRatePerBlock;
+        uint collateralFactor;
+        bool isComped;
     }
 }
 
@@ -133,6 +135,7 @@ contract Resolver is Helpers {
         for (uint i = 0; i < cAddress.length; i++) {
             CTokenInterface cToken = CTokenInterface(cAddress[i]);
             (uint priceInETH, uint priceInUSD) = getPriceInEth(cToken);
+            (,uint collateralFactor, bool isComped) = getComptroller().markets(address(cToken));
             tokensData[i] = CompData(
                 priceInETH,
                 priceInUSD,
@@ -140,7 +143,9 @@ contract Resolver is Helpers {
                 cToken.balanceOf(owner),
                 cToken.borrowBalanceStored(owner),
                 cToken.supplyRatePerBlock(),
-                cToken.borrowRatePerBlock()
+                cToken.borrowRatePerBlock(),
+                collateralFactor,
+                isComped
             );
         }
 
@@ -168,5 +173,5 @@ contract Resolver is Helpers {
 
 
 contract InstaCompoundResolver is Resolver {
-    string public constant name = "Compound-Resolver-v1.1";
+    string public constant name = "Compound-Resolver-v1.2";
 }
