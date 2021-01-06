@@ -476,15 +476,15 @@ contract Resolver is UniswapHelpers {
         require(address(lpToken) != address(0), "No-exchange-address");
         
         (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
-        uint256 reserveIn = lpToken.token0() == address(_tokenA) ? reserveA : reserveB;
+        (reserveA, reserveB) = lpToken.token0() == address(_tokenA) ? (reserveA, reserveB) : (reserveB, reserveA);
 
-        uint256 swapAmtA = calculateSwapInAmount(reserveIn, amountA);
+        uint256 swapAmtA = calculateSwapInAmount(reserveA, amountA);
 
         amtB = getExpectedBuyAmt(address(_tokenB), address(_tokenA), swapAmtA);
         amtA = sub(amountA, swapAmtA);
 
         uniAmt = mul(amtA, lpToken.totalSupply());
-        uniAmt = uniAmt / add(reserveIn, swapAmtA);
+        uniAmt = uniAmt / add(reserveA, swapAmtA);
 
         minUniAmt = wmul(sub(WAD, slippage), uniAmt);
     }
