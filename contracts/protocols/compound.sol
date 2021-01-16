@@ -6,6 +6,7 @@ interface CTokenInterface {
     function borrowRatePerBlock() external view returns (uint);
     function supplyRatePerBlock() external view returns (uint);
     function borrowBalanceStored(address) external view returns (uint);
+    function totalBorrows() external view returns (uint);
     
     function underlying() external view returns (address);
     function balanceOf(address) external view returns (uint);
@@ -26,6 +27,8 @@ interface ComptrollerLensInterface {
     function getAccountLiquidity(address) external view returns (uint, uint, uint);
     function claimComp(address) external;
     function compAccrued(address) external view returns (uint);
+    function borrowCaps(address) external view returns (uint);
+    function borrowGuardianPaused(address) external view returns (bool);
 }
 
 interface CompReadInterface {
@@ -112,10 +115,13 @@ contract Helpers is DSMath {
         uint exchangeRateStored;
         uint balanceOfUser;
         uint borrowBalanceStoredUser;
+        uint totalBorrows;
+        uint borrowCap;
         uint supplyRatePerBlock;
         uint borrowRatePerBlock;
         uint collateralFactor;
         bool isComped;
+        bool isBorrowPaused;
     }
 }
 
@@ -132,20 +138,24 @@ contract Resolver is Helpers {
 
     function getCompoundData(address owner, address[] memory cAddress) public view returns (CompData[] memory) {
         CompData[] memory tokensData = new CompData[](cAddress.length);
+        ComptrollerLensInterface troller = getComptroller();
         for (uint i = 0; i < cAddress.length; i++) {
             CTokenInterface cToken = CTokenInterface(cAddress[i]);
             (uint priceInETH, uint priceInUSD) = getPriceInEth(cToken);
-            (,uint collateralFactor, bool isComped) = getComptroller().markets(address(cToken));
+            (,uint collateralFactor, bool isComped) = troller.markets(address(cToken));
             tokensData[i] = CompData(
                 priceInETH,
                 priceInUSD,
                 cToken.exchangeRateStored(),
                 cToken.balanceOf(owner),
                 cToken.borrowBalanceStored(owner),
+                cToken.totalBorrows(),
+                troller.borrowCaps(cAddress[i]),
                 cToken.supplyRatePerBlock(),
                 cToken.borrowRatePerBlock(),
                 collateralFactor,
-                isComped
+                isComped,
+                troller.borrowGuardianPaused(cAddress[i])
             );
         }
 
