@@ -29,6 +29,7 @@ interface ComptrollerLensInterface {
     function compAccrued(address) external view returns (uint);
     function borrowCaps(address) external view returns (uint);
     function borrowGuardianPaused(address) external view returns (bool);
+    function oracle() external view returns (address);
 }
 
 interface CompReadInterface {
@@ -83,8 +84,8 @@ contract Helpers is DSMath {
     /**
      * @dev get Compound Open Feed Oracle Address
      */
-    function getOracleAddress() public pure returns (address) {
-        return 0x9B8Eb8b3d6e2e0Db36F41455185FEF7049a35CaE;
+    function getOracleAddress() public view returns (address) {
+        return getComptroller().oracle();
     }
 
     /**
