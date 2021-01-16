@@ -184,5 +184,5 @@ contract Resolver is Helpers {
 
 
 contract InstaCompoundResolver is Resolver {
-    string public constant name = "Compound-Resolver-v1.2";
+    string public constant name = "Compound-Resolver-v1.3";
 }
