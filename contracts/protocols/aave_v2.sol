@@ -176,6 +176,9 @@ contract AaveHelpers is DSMath {
         bool stableBorrowEnabled;
         bool isActive;
         bool isFrozen;
+        uint availableLiquidity;
+        uint totalStableDebt;
+        uint totalVariableDebt;
     }
 
      struct TokenPrice {
@@ -221,6 +224,8 @@ contract AaveHelpers is DSMath {
         uint tokenPriceInEth,
         uint tokenPriceInUsd
     ) internal view returns(AaveUserTokenData memory tokenData) {
+        AaveTokenData memory aaveTokenData = collateralData(aaveData, token);
+
         (
             tokenData.supplyBalance,
             tokenData.stableBorrowBalance,
@@ -230,14 +235,14 @@ contract AaveHelpers is DSMath {
         ) = aaveData.getUserReserveData(token, user);
 
         (
-            ,,,
+            aaveTokenData.availableLiquidity,
+            aaveTokenData.totalStableDebt,
+            aaveTokenData.totalVariableDebt,
             tokenData.supplyRate,
             tokenData.variableBorrowRate,
             tokenData.stableBorrowRate,
             ,,,
         ) = aaveData.getReserveData(token);
-
-        AaveTokenData memory aaveTokenData = collateralData(aaveData, token);
 
         tokenData.tokenPriceInEth = tokenPriceInEth;
         tokenData.tokenPriceInUsd = tokenPriceInUsd;
