@@ -57,6 +57,7 @@ interface AavePriceInterface {
 interface AaveCoreInterface {
     function getReserveCurrentLiquidityRate(address _reserve) external view returns (uint256);
     function getReserveCurrentVariableBorrowRate(address _reserve) external view returns (uint256);
+    function getReserveAvailableLiquidity(address _reserve) external view returns (uint256);
 }
 
 interface ChainLinkInterface {
@@ -148,6 +149,7 @@ contract AaveHelpers is DSMath {
         bool borrowEnabled;
         bool stableBorrowEnabled;
         bool isActive;
+        uint availableLiquidity;
     }
 
     struct TokenPrice {
@@ -181,6 +183,7 @@ contract AaveHelpers is DSMath {
             aaveTokenData.stableBorrowEnabled,
             aaveTokenData.isActive
         ) = aave.getReserveConfigurationData(token);
+
         return aaveTokenData;
     }
 
@@ -207,6 +210,7 @@ contract AaveHelpers is DSMath {
         uint supplyRate = aaveCore.getReserveCurrentLiquidityRate(token);
         uint borrowRate = aaveCore.getReserveCurrentVariableBorrowRate(token);
         AaveTokenData memory aaveTokenData = collateralData(aave, token);
+        aaveTokenData.availableLiquidity = aaveCore.getReserveAvailableLiquidity(token);
 
         tokenData = AaveUserTokenData(
             priceInEth,
@@ -265,5 +269,5 @@ contract Resolver is AaveHelpers {
 }
 
 contract InstaAaveResolver is Resolver {
-    string public constant name = "Aave-Resolver-v1.2";
+    string public constant name = "Aave-Resolver-v1.3";
 }
