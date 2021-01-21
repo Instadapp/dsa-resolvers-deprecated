@@ -121,8 +121,8 @@ contract Helpers is DSMath{
         uint ethPrice = solo.getMarketPrice(0).value;
         tokenData = new TokenData[](marketId.length);
         for (uint i = 0; i < marketId.length; i++) {
-            uint decimals = marketId[i] == 0 ? 18 : ERC20Interface(solo.getMarketTokenAddress(marketId[i])).decimals();
-            tokenData[i].balance = marketId[i] == 0 ? address(solo).balance : ERC20Interface(solo.getMarketTokenAddress(marketId[i])).balanceOf(address(solo));
+            uint decimals = ERC20Interface(solo.getMarketTokenAddress(marketId[i])).decimals();
+            tokenData[i].balance = ERC20Interface(solo.getMarketTokenAddress(marketId[i])).balanceOf(address(solo));
             uint price = marketId[i] == 1 ? 10 ** 18 : solo.getMarketPrice(marketId[i]).value;
             tokenData[i].tokenPriceInUsd = price / 10 ** (18 - decimals);
             tokenData[i].tokenPriceInEth = wdiv(tokenData[i].tokenPriceInUsd, ethPrice); 
