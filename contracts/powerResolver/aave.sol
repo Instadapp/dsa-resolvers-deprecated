@@ -22,14 +22,6 @@ interface AaveProviderInterface {
     function getPriceOracle() external view returns (address);
 }
 
-
-interface CTokenInterface {
-    function exchangeRateStored() external view returns (uint);
-    function borrowBalanceStored(address) external view returns (uint);
-
-    function balanceOf(address) external view returns (uint);
-}
-
 interface ListInterface {
     function accounts() external view returns (uint64);
     function accountID(address) external view returns (uint64);
@@ -42,6 +34,7 @@ contract Helpers {
         uint collateral;
         uint debt;
     }
+
     struct data {
         address user;
         AaveData[] tokensData;
