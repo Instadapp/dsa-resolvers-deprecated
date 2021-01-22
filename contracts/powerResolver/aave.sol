@@ -65,10 +65,10 @@ contract Resolver is Helpers {
     function getAaveDataByReserve(address[] memory owners, address reserve, AaveInterface aave) public view returns (AaveData[] memory) {
         AaveData[] memory tokensData = new AaveData[](owners.length);
         for (uint i = 0; i < owners.length; i++) {
-            (uint collateral, uint debt, uint principalDebt,,,,,,,) = aave.getUserReserveData(reserve, owners[i])
+            (uint collateral, uint debt,,,,,,,,) = aave.getUserReserveData(reserve, owners[i])
             tokensData[i] = AaveData(
                 collateral,
-                debt + principalDebt // TODO: is this right?
+                debt
             );
         }
 
