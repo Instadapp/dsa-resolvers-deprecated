@@ -72,7 +72,7 @@ contract Resolver is Helpers {
         return tokensData;
     }
 
-    function getPosition(
+    function getPositionByAddress(
         address[] memory owners,
         address[] memory cAddress
     )
@@ -80,6 +80,25 @@ contract Resolver is Helpers {
         view
         returns (datas[] memory)
     {
+        datas[] memory _data = new datas[](cAddress.length);
+        for (uint i = 0; i < cAddress.length; i++) {
+            _data[i] = datas(
+                getCompoundDataByToken(owners, cAddress[i])
+            );
+        }
+        return _data;
+    }
+
+    function getPositionByAccountIds(
+        uint start,
+        uint end,
+        address[] memory cAddress
+    )
+        public
+        view
+        returns (datas[] memory)
+    {
+        address[] owners = getDSAWallets(start, end);
         datas[] memory _data = new datas[](cAddress.length);
         for (uint i = 0; i < cAddress.length; i++) {
             _data[i] = datas(
