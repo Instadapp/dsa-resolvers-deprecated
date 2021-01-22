@@ -33,11 +33,14 @@ contract Helpers {
 
 contract Resolver is Helpers {
     
-    function getDSAWallets(uint len) public view returns(address[] memory) {
-        address[] memory wallets = new address[](len);
+    function getDSAWallets(uint start, uint end) public view returns(address[] memory) {
+        assert(start < end);
         ListInterface list = ListInterface(0x4c8a1BEb8a87765788946D6B19C6C6355194AbEb);
-        uint _len = len == 0 ? uint(list.accounts()) : len;
-        for (uint i = 0; i < _len; i++) {
+        uint totalAccounts = uint(list.accounts());
+        end = totalAccounts < end ? totalAccounts : end;
+        uint len = end - start;
+        address[] memory wallets = new address[](len);
+        for (uint i = start; i < end; i++) {
             wallets[i] = list.accountAddr(uint64(i+1));
         }
         return wallets;
