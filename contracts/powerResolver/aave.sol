@@ -58,7 +58,7 @@ contract Resolver is Helpers {
     function getAaveDataByReserve(address[] memory owners, address reserve, AaveInterface aave) public view returns (AaveData[] memory) {
         AaveData[] memory tokensData = new AaveData[](owners.length);
         for (uint i = 0; i < owners.length; i++) {
-            (uint collateral, uint debt,,,,,,,,) = aave.getUserReserveData(reserve, owners[i])
+            (uint collateral, uint debt,,,,,,,,) = aave.getUserReserveData(reserve, owners[i]);
             tokensData[i] = AaveData(
                 collateral,
                 debt
@@ -79,7 +79,7 @@ contract Resolver is Helpers {
         AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
         AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
         datas[] memory _data = new datas[](reserves.length);
-        for (uint i = 0; i < cAddress.length; i++) {
+        for (uint i = 0; i < reserves.length; i++) {
             _data[i] = datas(
                 getAaveDataByReserve(owners, reserves[i], aave)
             );

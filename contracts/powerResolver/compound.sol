@@ -98,7 +98,7 @@ contract Resolver is Helpers {
         view
         returns (datas[] memory)
     {
-        address[] owners = getDSAWallets(start, end);
+        address[] memory owners = getDSAWallets(start, end);
         datas[] memory _data = new datas[](cAddress.length);
         for (uint i = 0; i < cAddress.length; i++) {
             _data[i] = datas(

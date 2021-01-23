@@ -19,7 +19,7 @@ contract Resolver {
                 if (tknAddress[j] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
                     bals[j] = owners[i].balance;
                 } else {
-                    TokenInterface token = TokenInterface(tknAddress[i]);
+                    TokenInterface token = TokenInterface(tknAddress[j]);
                     bals[j] = token.balanceOf(owners[i]);
                 }
             }
