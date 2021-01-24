@@ -31,6 +31,11 @@ interface AaveAddressProvider {
     function getPriceOracle() external view returns (address);
 }
 
+interface ChainLinkInterface {
+    function latestAnswer() external view returns (int256);
+    function decimals() external view returns (uint256);
+}
+
 contract Helpers {
 
     struct AaveData {
@@ -55,9 +60,20 @@ contract Helpers {
         // return 0x652B2937Efd0B5beA1c8d54293FC1289672AFC6b; // Kovan
     }
 
+    /**
+     * @dev get Chainlink ETH price feed Address
+    */
+    function getChainlinkEthFeed() internal pure returns (address) {
+        return 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419; //mainnet
+        // return 0x9326BFA02ADD2366b30bacB125260Af641031331; //kovan
+    }
+
 }
 
 contract Resolver is Helpers {
+    function getEthPrice() public view returns (uint ethPrice) {
+        ethPrice = uint(ChainLinkInterface(getChainlinkEthFeed()).latestAnswer());
+    }
 
     function getPositionByAddress(
         address[] memory owners
@@ -67,7 +83,7 @@ contract Resolver is Helpers {
         returns (AaveData[] memory tokensData)
     {
         AaveAddressProvider addrProvider = AaveAddressProvider(getAaveAddressProvider());
-        AaveLendingPool aave = AaveLendingPool(addrProvider.getLendingPool();
+        AaveLendingPool aave = AaveLendingPool(addrProvider.getLendingPool());
         tokensData = new AaveData[](owners.length);
         for (uint i = 0; i < owners.length; i++) {
             (uint256 collateral,uint256 debt,,,,) = aave.getUserAccountData(owners[i]);

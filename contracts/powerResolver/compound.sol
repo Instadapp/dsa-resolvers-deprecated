@@ -6,15 +6,69 @@ interface CTokenInterface {
     function borrowBalanceStored(address) external view returns (uint);
 
     function balanceOf(address) external view returns (uint);
+    function underlying() external view returns (address);
 }
 
-interface ListInterface {
-    function accounts() external view returns (uint64);
-    function accountID(address) external view returns (uint64);
-    function accountAddr(uint64) external view returns (address);
+interface TokenInterface {
+    function decimals() external view returns (uint);
+    function balanceOf(address) external view returns (uint);
 }
 
-contract Helpers {
+interface OrcaleComp {
+    function getUnderlyingPrice(address) external view returns (uint);
+}
+
+interface ComptrollerLensInterface {
+    function oracle() external view returns (address);
+}
+
+contract DSMath {
+
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "math-not-safe");
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "math-not-safe");
+    }
+
+    uint constant WAD = 10 ** 18;
+
+    function wmul(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, y), WAD / 2) / WAD;
+    }
+
+    function wdiv(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, WAD), y / 2) / y;
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, "ds-math-sub-underflow");
+    }
+
+}
+contract Helpers is DSMath {
+    /**
+     * @dev get Compound Comptroller
+     */
+    function getComptroller() public pure returns (ComptrollerLensInterface) {
+        return ComptrollerLensInterface(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    }
+
+    /**
+     * @dev get Compound Open Feed Oracle Address
+     */
+    function getOracleAddress() public view returns (address) {
+        return getComptroller().oracle();
+    }
+
+     /**
+     * @dev get ETH Address
+     */
+    function getCETHAddress() public pure returns (address) {
+        return 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    }
+
 
     struct CompData {
         uint balanceOfUser;
@@ -28,22 +82,37 @@ contract Helpers {
      struct datas {
         CompData[] tokensData;
     }
+
+    struct CompoundTokensData {
+        uint tokenPriceInEth;
+        uint tokenPriceInUsd;
+        uint exchangeRateStored;
+    }
 }
 
 
 contract Resolver is Helpers {
-    
-    function getDSAWallets(uint start, uint end) public view returns(address[] memory) {
-        assert(start < end);
-        ListInterface list = ListInterface(0x4c8a1BEb8a87765788946D6B19C6C6355194AbEb);
-        uint totalAccounts = uint(list.accounts());
-        end = totalAccounts < end ? totalAccounts : end;
-        uint len = end - start;
-        address[] memory wallets = new address[](len);
-        for (uint i = start; i < end; i++) {
-            wallets[i] = list.accountAddr(uint64(i+1));
+    function getPriceInEth(CTokenInterface cToken) public view returns (uint priceInETH, uint priceInUSD) {
+        uint decimals = getCETHAddress() == address(cToken) ? 18 : TokenInterface(cToken.underlying()).decimals();
+        uint price = OrcaleComp(getOracleAddress()).getUnderlyingPrice(address(cToken));
+        uint ethPrice = OrcaleComp(getOracleAddress()).getUnderlyingPrice(getCETHAddress());
+        priceInUSD = price / 10 ** (18 - decimals);
+        priceInETH = wdiv(priceInUSD, ethPrice);
+    }
+
+    function getCompoundTokensData(address[] memory cAddress) public  view returns (CompoundTokensData[] memory) {
+        CompoundTokensData[] memory compoundTokensData = new CompoundTokensData[](cAddress.length);
+         for (uint i = 0; i < cAddress.length; i++) {
+            (uint priceInETH, uint priceInUSD) = getPriceInEth(CTokenInterface(cAddress[i]));
+            CTokenInterface cToken = CTokenInterface(cAddress[i]);
+            compoundTokensData[i] = CompoundTokensData(
+                priceInETH,
+                priceInUSD,
+                cToken.exchangeRateStored()
+            );
         }
-        return wallets;
+
+        return compoundTokensData;
     }
 
     function getCompoundData(address owner, address[] memory cAddress) public view returns (CompData[] memory) {
@@ -88,24 +157,4 @@ contract Resolver is Helpers {
         }
         return _data;
     }
-
-    function getPositionByAccountIds(
-        uint start,
-        uint end,
-        address[] memory cAddress
-    )
-        public
-        view
-        returns (datas[] memory)
-    {
-        address[] memory owners = getDSAWallets(start, end);
-        datas[] memory _data = new datas[](cAddress.length);
-        for (uint i = 0; i < cAddress.length; i++) {
-            _data[i] = datas(
-                getCompoundDataByToken(owners, cAddress[i])
-            );
-        }
-        return _data;
-    }
-
 }

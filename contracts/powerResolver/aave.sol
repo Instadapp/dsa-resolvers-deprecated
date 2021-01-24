@@ -14,18 +14,26 @@ interface AaveInterface {
         uint256 lastUpdateTimestamp,
         bool usageAsCollateralEnabled
     );
+
+    function getUserAccountData(address user) external view returns (
+        uint256 totalLiquidityETH,
+        uint256 totalCollateralETH,
+        uint256 totalBorrowsETH,
+        uint256 totalFeesETH,
+        uint256 availableBorrowsETH,
+        uint256 currentLiquidationThreshold,
+        uint256 ltv,
+        uint256 healthFactor
+    );
 }
 
 interface AaveProviderInterface {
     function getLendingPool() external view returns (address);
-    function getLendingPoolCore() external view returns (address);
-    function getPriceOracle() external view returns (address);
 }
 
-interface ListInterface {
-    function accounts() external view returns (uint64);
-    function accountID(address) external view returns (uint64);
-    function accountAddr(uint64) external view returns (address);
+interface ChainLinkInterface {
+    function latestAnswer() external view returns (int256);
+    function decimals() external view returns (uint256);
 }
 
 contract Helpers {
@@ -51,9 +59,20 @@ contract Helpers {
         return 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8; //mainnet
         // return 0x506B0B2CF20FAA8f38a4E2B524EE43e1f4458Cc5; //kovan
     }
+
+    /**
+     * @dev get Chainlink ETH price feed Address
+    */
+    function getChainlinkEthFeed() internal pure returns (address) {
+        return 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419; //mainnet
+        // return 0x9326BFA02ADD2366b30bacB125260Af641031331; //kovan
+    }
 }
 
 contract Resolver is Helpers {
+    function getEthPrice() public view returns (uint ethPrice) {
+        ethPrice = uint(ChainLinkInterface(getChainlinkEthFeed()).latestAnswer());
+    }
     
     function getAaveDataByReserve(address[] memory owners, address reserve, AaveInterface aave) public view returns (AaveData[] memory) {
         AaveData[] memory tokensData = new AaveData[](owners.length);
@@ -85,6 +104,31 @@ contract Resolver is Helpers {
             );
         }
         return _data;
+    }
+
+    function getPositionByAddress(
+        address[] memory owners
+    )
+        public
+        view
+        returns (AaveData[] memory)
+    {   
+        AaveProviderInterface AaveProvider = AaveProviderInterface(getAaveProviderAddress());
+        AaveInterface aave = AaveInterface(AaveProvider.getLendingPool());
+        AaveData[] memory tokensData = new AaveData[](owners.length);
+
+        for (uint i = 0; i < owners.length; i++) {
+            (
+            ,
+            uint totalCollateralETH,
+            uint totalBorrowsETH,
+            ,,,,) = aave.getUserAccountData(owners[i]);
+
+            tokensData[i] = AaveData(
+                totalCollateralETH,
+                totalBorrowsETH
+            );
+        }
     }
 
 }
