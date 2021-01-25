@@ -69,7 +69,7 @@ contract Helpers {
     }
 }
 
-contract Resolver is Helpers {
+contract InstaAaveV1PowerResolver is Helpers {
     function getEthPrice() public view returns (uint ethPrice) {
         ethPrice = uint(ChainLinkInterface(getChainlinkEthFeed()).latestAnswer());
     }
@@ -129,6 +129,8 @@ contract Resolver is Helpers {
                 totalBorrowsETH
             );
         }
+
+        return tokensData;
     }
 
 }
