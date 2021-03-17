@@ -5,27 +5,28 @@ interface TokenInterface {
     function balanceOf(address) external view returns (uint);
 }
 
-
 contract Resolver {
-    struct Balances {
-        address owner;
-        uint[] balance;
+    struct TokenBalances {
+        uint[] userBalances;
     }
-    function getBalances(address[] memory owners, address[] memory tknAddress) public view returns (Balances[] memory) {
-        Balances[] memory tokensBal = new Balances[](owners.length);
-        for (uint i = 0; i < owners.length; i++) {
-            uint[] memory bals = new uint[](tknAddress.length);
-            for (uint j = 0; j < tknAddress.length; j++) {
-                if (tknAddress[j] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
-                    bals[j] = owners[i].balance;
-                } else {
-                    TokenInterface token = TokenInterface(tknAddress[j]);
-                    bals[j] = token.balanceOf(owners[i]);
+
+    function getBalances(address[] memory owners, address[] memory tknAddress) public view returns (TokenBalances[] memory) {
+        TokenBalances[] memory tokensBal = new TokenBalances[](tknAddress.length);
+        for (uint i = 0; i < tknAddress.length; i++) {
+            uint[] memory bals = new uint[](owners.length);
+            TokenInterface token = TokenInterface(tknAddress[i]);
+            if (tknAddress[i] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+                for (uint j = 0; j < owners.length; j++) {
+                    bals[j] = owners[j].balance;
+                }
+            } else {
+                for (uint j = 0; j < owners.length; j++) {
+                    bals[j] = token.balanceOf(owners[j]);
                 }
             }
-            tokensBal[i] = Balances({
-                owner: owners[i],
-                balance: bals
+           
+            tokensBal[i] = TokenBalances({
+                userBalances: bals
             });
         }
         return tokensBal;
