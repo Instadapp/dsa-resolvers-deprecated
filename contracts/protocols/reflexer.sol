@@ -252,7 +252,7 @@ contract SafeResolver is Helpers {
 
 
 contract RedemptionRateResolver is SafeResolver {
-    function getRedemtpionRate() external view returns (uint redemptionRate) {
+    function getRedemptionRate() external view returns (uint redemptionRate) {
         address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
         redemptionRate = OracleRelayerLike(oracleRelayer).redemptionRate();
     }
