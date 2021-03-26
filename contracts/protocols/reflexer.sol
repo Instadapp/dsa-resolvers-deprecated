@@ -6,49 +6,45 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 interface ManagerLike {
-    function ilks(uint) external view returns (bytes32);
-    function owns(uint) external view returns (address);
-    function urns(uint) external view returns (address);
-    function vat() external view returns (address);
+    function collateralTypes(uint) external view returns (bytes32);
+    function ownsSAFE(uint) external view returns (address);
+    function safes(uint) external view returns (address);
+    function safeEngine() external view returns (address);
 }
 
-interface CdpsLike {
-    function getCdpsAsc(address, address) external view returns (uint[] memory, address[] memory, bytes32[] memory);
+interface GetSafesLike {
+    function getSafesAsc(address, address) external view returns (uint[] memory, address[] memory, bytes32[] memory);
 }
 
-interface VatLike {
-    function ilks(bytes32) external view returns (uint, uint, uint, uint, uint);
-    function dai(address) external view returns (uint);
-    function urns(bytes32, address) external view returns (uint, uint);
-    function gem(bytes32, address) external view returns (uint);
+interface SAFEEngineLike {
+    function collateralTypes(bytes32) external view returns (uint, uint, uint, uint, uint);
+    function coinBalance(address) external view returns (uint);
+    function safes(bytes32, address) external view returns (uint, uint);
+    function tokenCollateral(bytes32, address) external view returns (uint);
 }
 
-interface JugLike {
-    function ilks(bytes32) external view returns (uint, uint);
-    function base() external view returns (uint);
+interface TaxCollectorLike {
+    function collateralTypes(bytes32) external view returns (uint, uint);
+    function globalStabilityFee() external view returns (uint);
 }
 
-interface PotLike {
-    function dsr() external view returns (uint);
-    function pie(address) external view returns (uint);
-    function chi() external view returns (uint);
+interface OracleRelayerLike {
+    function collateralTypes(bytes32) external view returns (OracleLike, uint, uint);
+    function redemptionRate() external view returns (uint);
+
 }
 
-interface SpotLike {
-    function ilks(bytes32) external view returns (PipLike, uint);
+interface OracleLike {
+    function getResultWithValidity() external view returns (bytes32, bool);
 }
 
-interface PipLike {
-    function peek() external view returns (bytes32, bool);
-}
-
-interface InstaMcdAddress {
+interface InstaReflexerAddress {
     function manager() external view returns (address);
-    function vat() external view returns (address);
-    function jug() external view returns (address);
-    function spot() external view returns (address);
+    function safeEngine() external view returns (address);
+    function taxCollector() external view returns (address);
+    function oracleRelayer() external view returns (address);
+    function GetSafes() external view returns (address);
     function pot() external view returns (address);
-    function getCdps() external view returns (address);
 }
 
 
@@ -92,22 +88,23 @@ contract Helpers is DSMath {
     /**
      * @dev get MakerDAO MCD Address contract
      */
-    function getMcdAddresses() public pure returns (address) {
-        return 0xF23196DF1C440345DE07feFbe556a5eF0dcD29F0;
+    function getReflexerAddresses() public pure returns (address) {
+        // TODO: Set the actual Reflexer address getter contract
+        return 0x0000000000000000000000000000000000000000;
     }
 
-    struct VaultData {
+    struct SafeData {
         uint id;
         address owner;
         string colType;
         uint collateral;
-        uint art;
         uint debt;
+        uint adjustedDebt;
         uint liquidatedCol;
         uint borrowRate;
         uint colPrice;
         uint liquidationRatio;
-        address vaultAddress;
+        address safeAddress;
     }
 
     struct ColInfo {
@@ -149,102 +146,102 @@ contract Helpers is DSMath {
     }
 
 
-    function getFee(bytes32 ilk) internal view returns (uint fee) {
-        address jug = InstaMcdAddress(getMcdAddresses()).jug();
-        (uint duty,) = JugLike(jug).ilks(ilk);
-        uint base = JugLike(jug).base();
-        fee = add(duty, base);
+    function getFee(bytes32 collateralType) internal view returns (uint fee) {
+        address taxCollector = InstaReflexerAddress(getReflexerAddresses()).taxCollector();
+        (uint stabilityFee,) = TaxCollectorLike(taxCollector).collateralTypes(collateralType);
+        uint globalStabilityFee = TaxCollectorLike(taxCollector).globalStabilityFee();
+        fee = add(stabilityFee, globalStabilityFee);
     }
 
-    function getColPrice(bytes32 ilk) internal view returns (uint price) {
-        address spot = InstaMcdAddress(getMcdAddresses()).spot();
-        address vat = InstaMcdAddress(getMcdAddresses()).vat();
-        (, uint mat) = SpotLike(spot).ilks(ilk);
-        (,,uint spotPrice,,) = VatLike(vat).ilks(ilk);
-        price = rmul(mat, spotPrice);
+    function getColPrice(bytes32 collateralType) internal view returns (uint price) {
+        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
+        address safeEngine = InstaReflexerAddress(getReflexerAddresses()).safeEngine();
+        (, uint safetyCRatio,) = OracleRelayerLike(oracleRelayer).collateralTypes(collateralType);
+        (,,uint spotPrice,,) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
+        price = rmul(safetyCRatio, spotPrice);
     }
 
-    function getColRatio(bytes32 ilk) internal view returns (uint ratio) {
-        address spot = InstaMcdAddress(getMcdAddresses()).spot();
-        (, ratio) = SpotLike(spot).ilks(ilk);
+    function getColRatio(bytes32 collateralType) internal view returns (uint ratio) {
+        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
+        (, ratio,) = OracleRelayerLike(oracleRelayer).collateralTypes(collateralType);
     }
 
-    function getDebtCeiling(bytes32 ilk) internal view returns (uint debtCeiling, uint totalDebt) {
-        address vat = InstaMcdAddress(getMcdAddresses()).vat();
-        (uint totalArt,uint rate,,uint debtCeilingRad,) = VatLike(vat).ilks(ilk);
+    function getDebtCeiling(bytes32 collateralType) internal view returns (uint debtCeiling, uint totalDebt) {
+        address safeEngine = InstaReflexerAddress(getReflexerAddresses()).safeEngine();
+        (uint globalDebt,uint rate,,uint debtCeilingRad,) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
         debtCeiling = debtCeilingRad / 10 ** 45;
-        totalDebt = rmul(totalArt, rate);
+        totalDebt = rmul(globalDebt, rate);
     }
 }
 
 
-contract VaultResolver is Helpers {
-     function getVaults(address owner) external view returns (VaultData[] memory) {
-        address manager = InstaMcdAddress(getMcdAddresses()).manager();
-        address cdpManger = InstaMcdAddress(getMcdAddresses()).getCdps();
+contract SafeResolver is Helpers {
+     function getSafes(address owner) external view returns (SafeData[] memory) {
+        address manager = InstaReflexerAddress(getReflexerAddresses()).manager();
+        address safeManger = InstaReflexerAddress(getReflexerAddresses()).GetSafes();
 
-        (uint[] memory ids, address[] memory urns, bytes32[] memory ilks) = CdpsLike(cdpManger).getCdpsAsc(manager, owner);
-        VaultData[] memory vaults = new VaultData[](ids.length);
+        (uint[] memory ids, address[] memory handlers, bytes32[] memory collateralTypes) = GetSafesLike(safeManger).getSafesAsc(manager, owner);
+        SafeData[] memory safes = new SafeData[](ids.length);
 
         for (uint i = 0; i < ids.length; i++) {
-            (uint ink, uint art) = VatLike(ManagerLike(manager).vat()).urns(ilks[i], urns[i]);
-            (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilks[i]);
-            uint mat = getColRatio(ilks[i]);
+            (uint collateral, uint debt) = SAFEEngineLike(ManagerLike(manager).safeEngine()).safes(collateralTypes[i], handlers[i]);
+            (,uint rate, uint priceMargin,,) = SAFEEngineLike(ManagerLike(manager).safeEngine()).collateralTypes(collateralTypes[i]);
+            uint safetyCRatio = getColRatio(collateralTypes[i]);
 
-            vaults[i] = VaultData(
+            safes[i] = SafeData(
                 ids[i],
                 owner,
-                bytes32ToString(ilks[i]),
-                ink,
-                art,
-                rmul(art,rate),
-                VatLike(ManagerLike(manager).vat()).gem(ilks[i], urns[i]),
-                getFee(ilks[i]),
-                rmul(priceMargin, mat),
-                mat,
-                urns[i]
+                bytes32ToString(collateralTypes[i]),
+                collateral,
+                debt,
+                rmul(debt,rate),
+                SAFEEngineLike(ManagerLike(manager).safeEngine()).tokenCollateral(collateralTypes[i], handlers[i]),
+                getFee(collateralTypes[i]),
+                rmul(priceMargin, safetyCRatio),
+                safetyCRatio,
+                handlers[i]
             );
         }
-        return vaults;
+        return safes;
     }
 
-    function getVaultById(uint id) external view returns (VaultData memory) {
-        address manager = InstaMcdAddress(getMcdAddresses()).manager();
-        address urn = ManagerLike(manager).urns(id);
-        bytes32 ilk = ManagerLike(manager).ilks(id);
+    function getSafeById(uint id) external view returns (SafeData memory) {
+        address manager = InstaReflexerAddress(getReflexerAddresses()).manager();
+        address handler = ManagerLike(manager).safes(id);
+        bytes32 collateralType = ManagerLike(manager).collateralTypes(id);
 
-        (uint ink, uint art) = VatLike(ManagerLike(manager).vat()).urns(ilk, urn);
-        (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilk);
+        (uint collateral, uint debt) = SAFEEngineLike(ManagerLike(manager).safeEngine()).safes(collateralType, handler);
+        (,uint rate, uint priceMargin,,) = SAFEEngineLike(ManagerLike(manager).safeEngine()).collateralTypes(collateralType);
 
-        uint mat = getColRatio(ilk);
+        uint safetyCRatio = getColRatio(collateralType);
 
-        uint feeRate = getFee(ilk);
-        VaultData memory vault = VaultData(
+        uint feeRate = getFee(collateralType);
+        SafeData memory safe = SafeData(
             id,
-            ManagerLike(manager).owns(id),
-            bytes32ToString(ilk),
-            ink,
-            art,
-            rmul(art,rate),
-            VatLike(ManagerLike(manager).vat()).gem(ilk, urn),
+            ManagerLike(manager).ownsSAFE(id),
+            bytes32ToString(collateralType),
+            collateral,
+            debt,
+            rmul(debt,rate),
+            SAFEEngineLike(ManagerLike(manager).safeEngine()).tokenCollateral(collateralType, handler),
             feeRate,
-            rmul(priceMargin, mat),
-            mat,
-            urn
+            rmul(priceMargin, safetyCRatio),
+            safetyCRatio,
+            handler
         );
-        return vault;
+        return safe;
     }
 
     function getColInfo(string[] memory name) public view returns (ColInfo[] memory) {
         ColInfo[] memory colInfo = new ColInfo[](name.length);
 
         for (uint i = 0; i < name.length; i++) {
-            bytes32 ilk = stringToBytes32(name[i]);
-            (uint debtCeiling, uint totalDebt) = getDebtCeiling(ilk);
+            bytes32 collateralType = stringToBytes32(name[i]);
+            (uint debtCeiling, uint totalDebt) = getDebtCeiling(collateralType);
             colInfo[i] = ColInfo(
-                getFee(ilk),
-                getColPrice(ilk),
-                getColRatio(ilk),
+                getFee(collateralType),
+                getColPrice(collateralType),
+                getColRatio(collateralType),
                 debtCeiling,
                 totalDebt
             );
@@ -255,22 +252,14 @@ contract VaultResolver is Helpers {
 }
 
 
-contract DSRResolver is VaultResolver {
-    function getDsrRate() public view returns (uint dsr) {
-        address pot = InstaMcdAddress(getMcdAddresses()).pot();
-        dsr = PotLike(pot).dsr();
-    }
-
-    function getDaiPosition(address owner) external view returns (uint amt, uint dsr) {
-        address pot = InstaMcdAddress(getMcdAddresses()).pot();
-        uint chi = PotLike(pot).chi();
-        uint pie = PotLike(pot).pie(owner);
-        amt = rmul(pie,chi);
-        dsr = getDsrRate();
+contract RedemptionRateResolver is SafeResolver {
+    function getRedemtpionRate() external view returns (uint redemptionRate) {
+        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
+        redemptionRate = OracleRelayerLike(oracleRelayer).redemptionRate();
     }
 }
 
 
-contract InstaMakerResolver is DSRResolver {
-    string public constant name = "Maker-Resolver-v1.2";
+contract InstaReflexerResolver is RedemptionRateResolver {
+    string public constant name = "Reflexer-Resolver-v1";
 }
