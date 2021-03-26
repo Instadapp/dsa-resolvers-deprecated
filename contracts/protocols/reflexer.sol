@@ -38,15 +38,6 @@ interface OracleLike {
     function getResultWithValidity() external view returns (bytes32, bool);
 }
 
-interface InstaReflexerAddress {
-    function manager() external view returns (address);
-    function safeEngine() external view returns (address);
-    function taxCollector() external view returns (address);
-    function oracleRelayer() external view returns (address);
-    function GetSafes() external view returns (address);
-}
-
-
 contract DSMath {
 
     function add(uint x, uint y) internal pure returns (uint z) {
@@ -84,13 +75,6 @@ contract DSMath {
 
 
 contract Helpers is DSMath {
-    /**
-     * @dev get MakerDAO MCD Address contract
-     */
-    function getReflexerAddresses() public pure returns (address) {
-        // TODO: Set the actual Reflexer address getter contract
-        return 0x0000000000000000000000000000000000000000;
-    }
 
     struct SafeData {
         uint id;
@@ -112,6 +96,27 @@ contract Helpers is DSMath {
         uint liquidationRatio;
         uint debtCelling;
         uint totalDebt;
+    }
+
+    struct ReflexerAddress {
+        address manager;
+        address safeEngine;
+        address taxCollector;
+        address oracleRelayer;
+        address getSafes;
+    }
+
+    /**
+     * @dev get Reflexer Address contract
+     */
+    function getReflexerAddresses() public pure returns (ReflexerAddress memory) {
+        return ReflexerAddress(
+            0xEfe0B4cA532769a3AE758fD82E1426a03A94F185, // manager
+            0xCC88a9d330da1133Df3A7bD823B95e52511A6962, // safeEngine
+            0xcDB05aEda142a1B0D6044C09C64e4226c1a281EB, // taxCollector
+            0x4ed9C0dCa0479bC64d8f4EB3007126D5791f7851, // oracleRelayer
+            0xdf4BC9aA98cC8eCd90Ba2BEe73aD4a1a9C8d202B  // getSafes
+        );
     }
 
     /**
@@ -146,27 +151,27 @@ contract Helpers is DSMath {
 
 
     function getFee(bytes32 collateralType) internal view returns (uint fee) {
-        address taxCollector = InstaReflexerAddress(getReflexerAddresses()).taxCollector();
+        address taxCollector = getReflexerAddresses().taxCollector;
         (uint stabilityFee,) = TaxCollectorLike(taxCollector).collateralTypes(collateralType);
         uint globalStabilityFee = TaxCollectorLike(taxCollector).globalStabilityFee();
         fee = add(stabilityFee, globalStabilityFee);
     }
 
     function getColPrice(bytes32 collateralType) internal view returns (uint price) {
-        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
-        address safeEngine = InstaReflexerAddress(getReflexerAddresses()).safeEngine();
+        address oracleRelayer = getReflexerAddresses().oracleRelayer;
+        address safeEngine = getReflexerAddresses().safeEngine;
         (, uint safetyCRatio,) = OracleRelayerLike(oracleRelayer).collateralTypes(collateralType);
         (,,uint spotPrice,,) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
         price = rmul(safetyCRatio, spotPrice);
     }
 
     function getColRatio(bytes32 collateralType) internal view returns (uint ratio) {
-        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
+        address oracleRelayer = getReflexerAddresses().oracleRelayer;
         (, ratio,) = OracleRelayerLike(oracleRelayer).collateralTypes(collateralType);
     }
 
     function getDebtCeiling(bytes32 collateralType) internal view returns (uint debtCeiling, uint totalDebt) {
-        address safeEngine = InstaReflexerAddress(getReflexerAddresses()).safeEngine();
+        address safeEngine = getReflexerAddresses().safeEngine;
         (uint globalDebt,uint rate,,uint debtCeilingRad,) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
         debtCeiling = debtCeilingRad / 10 ** 45;
         totalDebt = rmul(globalDebt, rate);
@@ -176,8 +181,8 @@ contract Helpers is DSMath {
 
 contract SafeResolver is Helpers {
      function getSafes(address owner) external view returns (SafeData[] memory) {
-        address manager = InstaReflexerAddress(getReflexerAddresses()).manager();
-        address safeManger = InstaReflexerAddress(getReflexerAddresses()).GetSafes();
+        address manager = getReflexerAddresses().manager;
+        address safeManger = getReflexerAddresses().getSafes;
 
         (uint[] memory ids, address[] memory handlers, bytes32[] memory collateralTypes) = GetSafesLike(safeManger).getSafesAsc(manager, owner);
         SafeData[] memory safes = new SafeData[](ids.length);
@@ -205,7 +210,7 @@ contract SafeResolver is Helpers {
     }
 
     function getSafeById(uint id) external view returns (SafeData memory) {
-        address manager = InstaReflexerAddress(getReflexerAddresses()).manager();
+        address manager = getReflexerAddresses().manager;
         address handler = ManagerLike(manager).safes(id);
         bytes32 collateralType = ManagerLike(manager).collateralTypes(id);
 
@@ -253,7 +258,7 @@ contract SafeResolver is Helpers {
 
 contract RedemptionRateResolver is SafeResolver {
     function getRedemptionRate() external view returns (uint redemptionRate) {
-        address oracleRelayer = InstaReflexerAddress(getReflexerAddresses()).oracleRelayer();
+        address oracleRelayer = getReflexerAddresses().oracleRelayer;
         redemptionRate = OracleRelayerLike(oracleRelayer).redemptionRate();
     }
 }
