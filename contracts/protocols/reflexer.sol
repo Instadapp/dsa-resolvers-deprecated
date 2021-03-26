@@ -44,7 +44,6 @@ interface InstaReflexerAddress {
     function taxCollector() external view returns (address);
     function oracleRelayer() external view returns (address);
     function GetSafes() external view returns (address);
-    function pot() external view returns (address);
 }
 
 
