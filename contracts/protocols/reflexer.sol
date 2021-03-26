@@ -98,7 +98,7 @@ contract Helpers is DSMath {
         uint totalDebt;
     }
 
-    struct ReflexerAddress {
+    struct ReflexerAddresses {
         address manager;
         address safeEngine;
         address taxCollector;
@@ -109,8 +109,8 @@ contract Helpers is DSMath {
     /**
      * @dev get Reflexer Address contract
      */
-    function getReflexerAddresses() public pure returns (ReflexerAddress memory) {
-        return ReflexerAddress(
+    function getReflexerAddresses() public pure returns (ReflexerAddresses memory) {
+        return ReflexerAddresses(
             0xEfe0B4cA532769a3AE758fD82E1426a03A94F185, // manager
             0xCC88a9d330da1133Df3A7bD823B95e52511A6962, // safeEngine
             0xcDB05aEda142a1B0D6044C09C64e4226c1a281EB, // taxCollector
