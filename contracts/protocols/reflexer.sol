@@ -94,7 +94,8 @@ contract Helpers is DSMath {
         uint borrowRate;
         uint price;
         uint liquidationRatio;
-        uint debtCelling;
+        uint debtCeiling;
+        uint debtFloor;
         uint totalDebt;
     }
 
@@ -170,10 +171,11 @@ contract Helpers is DSMath {
         (, ratio,) = OracleRelayerLike(oracleRelayer).collateralTypes(collateralType);
     }
 
-    function getDebtCeiling(bytes32 collateralType) internal view returns (uint debtCeiling, uint totalDebt) {
+    function getDebtState(bytes32 collateralType) internal view returns (uint debtCeiling, uint debtFloor, uint totalDebt) {
         address safeEngine = getReflexerAddresses().safeEngine;
-        (uint globalDebt,uint rate,,uint debtCeilingRad,) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
+        (uint globalDebt,uint rate,,uint debtCeilingRad, uint debtFloorRad) = SAFEEngineLike(safeEngine).collateralTypes(collateralType);
         debtCeiling = debtCeilingRad / 10 ** 45;
+        debtFloor = debtFloorRad / 10 ** 45;
         totalDebt = rmul(globalDebt, rate);
     }
 }
@@ -241,12 +243,13 @@ contract SafeResolver is Helpers {
 
         for (uint i = 0; i < name.length; i++) {
             bytes32 collateralType = stringToBytes32(name[i]);
-            (uint debtCeiling, uint totalDebt) = getDebtCeiling(collateralType);
+            (uint debtCeiling, uint debtFloor, uint totalDebt) = getDebtState(collateralType);
             colInfo[i] = ColInfo(
                 getFee(collateralType),
                 getColPrice(collateralType),
                 getColRatio(collateralType),
                 debtCeiling,
+                debtFloor,
                 totalDebt
             );
         }
