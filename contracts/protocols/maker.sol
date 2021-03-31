@@ -275,5 +275,5 @@ contract DSRResolver is VaultResolver {
 
 
 contract InstaMakerResolver is DSRResolver {
-    string public constant name = "Maker-Resolver-v1.2";
+    string public constant name = "Maker-Resolver-v1.3";
 }
