@@ -111,6 +111,7 @@ contract Helpers is DSMath {
         uint price;
         uint liquidationRatio;
         uint debtCelling;
+        uint debtFloor;
         uint totalDebt;
     }
 
@@ -170,6 +171,11 @@ contract Helpers is DSMath {
         (uint totalArt,uint rate,,uint debtCeilingRad,) = VatLike(vat).ilks(ilk);
         debtCeiling = debtCeilingRad / 10 ** 45;
         totalDebt = rmul(totalArt, rate);
+    }
+
+    function getDebtFloor(bytes32 ilk) internal view returns(uint debtFloor) {
+        address vat = InstaMcdAddress(getMcdAddresses()).vat();
+        (,,,,debtFloor) = VatLike(vat).ilks(ilk);
     }
 }
 
@@ -242,6 +248,7 @@ contract VaultResolver is Helpers {
                 getColPrice(ilk),
                 getColRatio(ilk),
                 debtCeiling,
+                getDebtFloor(ilk),
                 totalDebt
             );
         }
