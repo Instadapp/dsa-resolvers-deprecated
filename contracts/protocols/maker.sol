@@ -175,7 +175,7 @@ contract Helpers is DSMath {
 
 
 contract VaultResolver is Helpers {
-    function getVaults(address owner) external view returns (VaultData[] memory) {
+     function getVaults(address owner) external view returns (VaultData[] memory) {
         address manager = InstaMcdAddress(getMcdAddresses()).manager();
         address cdpManger = InstaMcdAddress(getMcdAddresses()).getCdps();
 
@@ -186,10 +186,6 @@ contract VaultResolver is Helpers {
             (uint ink, uint art) = VatLike(ManagerLike(manager).vat()).urns(ilks[i], urns[i]);
             (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilks[i]);
             uint mat = getColRatio(ilks[i]);
-            uint debt = rmul(art,rate);
-            uint price = rmul(priceMargin, mat);
-            uint feeRate = getFee(ilks[i]);
-            uint liqInk = VatLike(ManagerLike(manager).vat()).gem(ilks[i], urns[i]);
 
             vaults[i] = VaultData(
                 ids[i],
@@ -197,10 +193,10 @@ contract VaultResolver is Helpers {
                 bytes32ToString(ilks[i]),
                 ink,
                 art,
-                debt,
-                liqInk,
-                feeRate,
-                price,
+                rmul(art,rate),
+                VatLike(ManagerLike(manager).vat()).gem(ilks[i], urns[i]),
+                getFee(ilks[i]),
+                rmul(priceMargin, mat),
                 mat,
                 urns[i]
             );
@@ -212,28 +208,23 @@ contract VaultResolver is Helpers {
         address manager = InstaMcdAddress(getMcdAddresses()).manager();
         address urn = ManagerLike(manager).urns(id);
         bytes32 ilk = ManagerLike(manager).ilks(id);
-        address owner = ManagerLike(manager).owns(id);
 
         (uint ink, uint art) = VatLike(ManagerLike(manager).vat()).urns(ilk, urn);
         (,uint rate, uint priceMargin,,) = VatLike(ManagerLike(manager).vat()).ilks(ilk);
-        uint debt = rmul(art,rate);
 
         uint mat = getColRatio(ilk);
-        uint price = rmul(priceMargin, mat);
-        uint liqInk = VatLike(ManagerLike(manager).vat()).gem(ilk, urn);
-
 
         uint feeRate = getFee(ilk);
         VaultData memory vault = VaultData(
             id,
-            owner,
+            ManagerLike(manager).owns(id),
             bytes32ToString(ilk),
             ink,
             art,
-            debt,
-            liqInk,
+            rmul(art,rate),
+            VatLike(ManagerLike(manager).vat()).gem(ilk, urn),
             feeRate,
-            price,
+            rmul(priceMargin, mat),
             mat,
             urn
         );
@@ -277,5 +268,5 @@ contract DSRResolver is VaultResolver {
 
 
 contract InstaMakerResolver is DSRResolver {
-    string public constant name = "Maker-Resolver-v1.1";
+    string public constant name = "Maker-Resolver-v1.2";
 }
