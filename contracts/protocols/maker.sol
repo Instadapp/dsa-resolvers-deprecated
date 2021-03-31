@@ -166,16 +166,13 @@ contract Helpers is DSMath {
         (, ratio) = SpotLike(spot).ilks(ilk);
     }
 
-    function getDebtCeiling(bytes32 ilk) internal view returns (uint debtCeiling, uint totalDebt) {
+    function getDebtFloorAndCeiling(bytes32 ilk) internal view returns (uint, uint, uint) {
         address vat = InstaMcdAddress(getMcdAddresses()).vat();
-        (uint totalArt,uint rate,,uint debtCeilingRad,) = VatLike(vat).ilks(ilk);
+        (uint totalArt,uint rate,, uint debtCeilingRad, uint debtFloor) = VatLike(vat).ilks(ilk);
         debtCeiling = debtCeilingRad / 10 ** 45;
         totalDebt = rmul(totalArt, rate);
-    }
 
-    function getDebtFloor(bytes32 ilk) internal view returns(uint debtFloor) {
-        address vat = InstaMcdAddress(getMcdAddresses()).vat();
-        (,,,,debtFloor) = VatLike(vat).ilks(ilk);
+        return (debtCeiling, totalDebt, debtFloor);
     }
 }
 
@@ -242,13 +239,13 @@ contract VaultResolver is Helpers {
 
         for (uint i = 0; i < name.length; i++) {
             bytes32 ilk = stringToBytes32(name[i]);
-            (uint debtCeiling, uint totalDebt) = getDebtCeiling(ilk);
+            (uint debtCeiling, uint totalDebt, uint debtFloor) = getDebtFloorAndCeiling(ilk);
             colInfo[i] = ColInfo(
                 getFee(ilk),
                 getColPrice(ilk),
                 getColRatio(ilk),
                 debtCeiling,
-                getDebtFloor(ilk),
+                debtFloor,
                 totalDebt
             );
         }
