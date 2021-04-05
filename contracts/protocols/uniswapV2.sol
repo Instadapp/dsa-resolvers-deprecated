@@ -541,6 +541,8 @@ contract Resolver is UniswapHelpers {
         uint reserveB;
         uint tokenAShareAmt;
         uint tokenBShareAmt;
+        uint tokenABalance;
+        uint tokenBBalance;
         uint lpAmount;
         uint totalSupply;
     }
@@ -570,17 +572,23 @@ contract Resolver is UniswapHelpers {
                 uint amtA = wmul(reserveA, share);
                 uint amtB = wmul(reserveB, share);
                 poolData[i] = PoolData(
-                    tokenPairs[i].tokenA,
-                    tokenPairs[i].tokenB,
+                    address(0),
+                    address(0),
                     address(lpToken),
                     reserveA,
                     reserveB,
                     amtA,
                     amtB,
+                    0,
+                    0,
                     lpAmount,
                     totalSupply
                 );
             }
+            poolData[i].tokenA = tokenPairs[i].tokenA;
+            poolData[i].tokenB = tokenPairs[i].tokenB;
+            poolData[i].tokenABalance = tokenPairs[i].tokenA == getEthAddr() ? owner.balance : tokenA.balanceOf(owner);
+            poolData[i].tokenBBalance = tokenPairs[i].tokenB == getEthAddr() ? owner.balance : tokenB.balanceOf(owner);
         }
         return poolData;
     }
@@ -592,6 +600,8 @@ contract Resolver is UniswapHelpers {
     {
         uint _len = lpTokens.length;
         PoolData[] memory poolData = new PoolData[](_len);
+        address wethAddr = getAddressWETH();
+        address ethAddr = getEthAddr();
         for (uint i = 0; i < _len; i++) {
             IUniswapV2Pair lpToken = IUniswapV2Pair(lpTokens[i]);
             (uint256 reserveA, uint256 reserveB, ) = lpToken.getReserves();
@@ -603,13 +613,15 @@ contract Resolver is UniswapHelpers {
             uint amtA = wmul(reserveA, share);
             uint amtB = wmul(reserveB, share);
             poolData[i] = PoolData(
-                tokenA,
-                tokenB,
+                tokenA == wethAddr ? ethAddr : tokenA,
+                tokenB == wethAddr ? ethAddr : tokenB,
                 address(lpToken),
                 reserveA,
                 reserveB,
                 amtA,
                 amtB,
+                tokenA == wethAddr ? owner.balance : TokenInterface(tokenA).balanceOf(owner),
+                tokenB == wethAddr ? owner.balance : TokenInterface(tokenB).balanceOf(owner),
                 lpAmount,
                 totalSupply
             );

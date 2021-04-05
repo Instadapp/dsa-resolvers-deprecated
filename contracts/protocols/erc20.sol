@@ -7,7 +7,6 @@ interface TokenInterface {
     function decimals() external view returns (uint);
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
-
 }
 
 contract Resolver {
@@ -30,21 +29,32 @@ contract Resolver {
                 );
             } else {
                 TokenInterface token = TokenInterface(tknAddress[i]);
+                bool isToken = true;
+                
+                try token.symbol() {
+                } catch {
+                    isToken = false;
+                    continue;
+                }
+                
                 try token.name() {
-                    tokenDatas[i] = TokenData(
+                } catch {
+                    isToken = false;
+                    continue;
+                }
+                
+                try token.decimals() {
+                } catch {
+                    isToken = false;
+                    continue;
+                }
+                
+                tokenDatas[i] = TokenData(
                         true,
                         token.name(),
                         token.symbol(),
                         token.decimals()
-                    );
-                } catch {
-                    tokenDatas[i] = TokenData(
-                        false,
-                        "",
-                        "",
-                        0
-                    );
-                }
+                );
             }
         }
         return tokenDatas;
@@ -81,6 +91,6 @@ contract Resolver {
 
 contract InstaERC20Resolver is Resolver {
 
-    string public constant name = "ERC20-Resolver-v1";
+    string public constant name = "ERC20-Resolver-v1.1";
 
 }
