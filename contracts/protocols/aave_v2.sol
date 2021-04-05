@@ -152,6 +152,7 @@ contract AaveHelpers is DSMath {
         uint variableBorrowBalance;
         uint supplyRate;
         uint stableBorrowRate;
+        uint userStableBorrowRate;
         uint variableBorrowRate;
         bool isCollateral;
         AaveTokenData aaveTokenData;
@@ -230,7 +231,9 @@ contract AaveHelpers is DSMath {
             tokenData.supplyBalance,
             tokenData.stableBorrowBalance,
             tokenData.variableBorrowBalance,
-            ,,,,,
+            ,,
+            tokenData.userStableBorrowRate,
+            ,,
             tokenData.isCollateral
         ) = aaveData.getUserReserveData(token, user);
 
@@ -300,5 +303,5 @@ contract Resolver is AaveHelpers {
 }
 
 contract InstaAaveV2Resolver is Resolver {
-    string public constant name = "AaveV2-Resolver-v1.3";
+    string public constant name = "AaveV2-Resolver-v1.4";
 }
