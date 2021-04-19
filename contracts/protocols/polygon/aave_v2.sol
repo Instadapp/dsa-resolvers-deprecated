@@ -270,10 +270,11 @@ contract AaveHelpers is DSMath {
     }
 
     function getPendingRewards(address[] memory _tokens, address user) internal view returns (uint rewards) {
-        address[] memory _atokens = new address[](_tokens.length);
+        uint arrLength = 2 * _tokens.length;
+        address[] memory _atokens = new address[](arrLength);
         AaveProtocolDataProvider aaveData = AaveProtocolDataProvider(getAaveProtocolDataProvider());
         for (uint i = 0; i < _tokens.length; i++) {
-            (_atokens[i],,) = aaveData.getReserveTokensAddresses(_tokens[i]);
+            (_atokens[2*i],,_atokens[2*i + 1]) = aaveData.getReserveTokensAddresses(_tokens[i]);
         }
         rewards = AaveIncentivesInterface(getAaveIncentivesAddress()).getRewardsBalance(_atokens, user);
     }
