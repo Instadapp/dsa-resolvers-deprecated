@@ -39,6 +39,12 @@ interface AaveProtocolDataProvider {
         uint256 variableBorrowIndex,
         uint40 lastUpdateTimestamp
     );
+
+    function getReserveTokensAddresses(address asset) external view returns (
+        address aTokenAddress,
+        address stableDebtTokenAddress,
+        address variableDebtTokenAddress
+    );
 }
 
 interface AaveLendingPool {
@@ -62,6 +68,13 @@ interface AavePriceOracle {
     function getAssetsPrices(address[] calldata _assets) external view returns(uint256[] memory);
     function getSourceOfAsset(address _asset) external view returns(uint256);
     function getFallbackOracle() external view returns(uint256);
+}
+
+interface AaveIncentivesInterface {
+    function getRewardsBalance(
+        address[] calldata assets,
+        address user
+    ) external view returns (uint256);
 }
 
 interface ChainLinkInterface {
@@ -144,6 +157,13 @@ contract AaveHelpers is DSMath {
         // return 0x9326BFA02ADD2366b30bacB125260Af641031331; //kovan
     }
 
+    /**
+     * @dev Aave Incentives address
+    */
+    function getAaveIncentivesAddress() internal pure returns (address) {
+        return 0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5; // polygon mainnet
+    }
+
     struct AaveUserTokenData {
         uint tokenPriceInEth;
         uint tokenPriceInUsd;
@@ -166,6 +186,7 @@ contract AaveHelpers is DSMath {
         uint ltv;
         uint healthFactor;
         uint ethPriceInUsd;
+        uint pendingRewards;
     }
 
     struct AaveTokenData {
@@ -252,7 +273,17 @@ contract AaveHelpers is DSMath {
         tokenData.aaveTokenData = aaveTokenData;
     }
 
-    function getUserData(AaveLendingPool aave, address user, uint ethPriceInUsd)
+    function getPendingRewards(address[] memory _tokens, address user) internal view returns (uint rewards) {
+        uint arrLength = 2 * _tokens.length;
+        address[] memory _atokens = new address[](arrLength);
+        AaveProtocolDataProvider aaveData = AaveProtocolDataProvider(getAaveProtocolDataProvider());
+        for (uint i = 0; i < _tokens.length; i++) {
+            (_atokens[2*i],,_atokens[2*i + 1]) = aaveData.getReserveTokensAddresses(_tokens[i]);
+        }
+        rewards = AaveIncentivesInterface(getAaveIncentivesAddress()).getRewardsBalance(_atokens, user);
+    }
+
+    function getUserData(AaveLendingPool aave, address user, uint ethPriceInUsd, address[] memory tokens)
     internal view returns (AaveUserData memory userData) {
         (
             uint256 totalCollateralETH,
@@ -263,6 +294,8 @@ contract AaveHelpers is DSMath {
             uint256 healthFactor
         ) = aave.getUserAccountData(user);
 
+        uint256 pendingRewards = getPendingRewards(tokens, user);
+
         userData = AaveUserData(
             totalCollateralETH,
             totalDebtETH,
@@ -270,7 +303,8 @@ contract AaveHelpers is DSMath {
             currentLiquidationThreshold,
             ltv,
             healthFactor,
-            ethPriceInUsd
+            ethPriceInUsd,
+            pendingRewards
         );
     }
 }
@@ -298,10 +332,10 @@ contract Resolver is AaveHelpers {
             );
         }
 
-        return (tokensData, getUserData(AaveLendingPool(addrProvider.getLendingPool()), user, ethPrice));
+        return (tokensData, getUserData(AaveLendingPool(addrProvider.getLendingPool()), user, ethPrice, _tokens));
     }
 }
 
 contract InstaAaveV2Resolver is Resolver {
-    string public constant name = "AaveV2-Resolver-v1.4";
+    string public constant name = "AaveV2-Resolver-v1.5";
 }
