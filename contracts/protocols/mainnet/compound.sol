@@ -10,6 +10,7 @@ interface CTokenInterface {
     
     function underlying() external view returns (address);
     function balanceOf(address) external view returns (uint);
+    function getCash() external view returns (uint);
 }
 
 interface TokenInterface {
@@ -30,6 +31,7 @@ interface ComptrollerLensInterface {
     function borrowCaps(address) external view returns (uint);
     function borrowGuardianPaused(address) external view returns (bool);
     function oracle() external view returns (address);
+    function compSpeeds(address) external view returns (uint);
 }
 
 interface CompReadInterface {
@@ -117,10 +119,12 @@ contract Helpers is DSMath {
         uint balanceOfUser;
         uint borrowBalanceStoredUser;
         uint totalBorrows;
+        uint totalSupplied;
         uint borrowCap;
         uint supplyRatePerBlock;
         uint borrowRatePerBlock;
         uint collateralFactor;
+        uint compSpeed;
         bool isComped;
         bool isBorrowPaused;
     }
@@ -144,17 +148,20 @@ contract Resolver is Helpers {
             CTokenInterface cToken = CTokenInterface(cAddress[i]);
             (uint priceInETH, uint priceInUSD) = getPriceInEth(cToken);
             (,uint collateralFactor, bool isComped) = troller.markets(address(cToken));
+            uint _totalBorrowed = cToken.totalBorrows();
             tokensData[i] = CompData(
                 priceInETH,
                 priceInUSD,
                 cToken.exchangeRateStored(),
                 cToken.balanceOf(owner),
                 cToken.borrowBalanceStored(owner),
-                cToken.totalBorrows(),
+                _totalBorrowed,
+                add(_totalBorrowed, cToken.getCash()),
                 troller.borrowCaps(cAddress[i]),
                 cToken.supplyRatePerBlock(),
                 cToken.borrowRatePerBlock(),
                 collateralFactor,
+                troller.compSpeeds(cAddress[i]),
                 isComped,
                 troller.borrowGuardianPaused(cAddress[i])
             );
@@ -184,5 +191,5 @@ contract Resolver is Helpers {
 
 
 contract InstaCompoundResolver is Resolver {
-    string public constant name = "Compound-Resolver-v1.3";
+    string public constant name = "Compound-Resolver-v1.4";
 }

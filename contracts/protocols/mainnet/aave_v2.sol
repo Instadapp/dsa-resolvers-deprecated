@@ -58,6 +58,10 @@ interface AaveLendingPool {
     );
 }
 
+interface TokenInterface {
+    function totalSupply() external view returns (uint);
+}
+
 interface AaveAddressProvider {
     function getLendingPool() external view returns (address);
     function getPriceOracle() external view returns (address);
@@ -71,10 +75,20 @@ interface AavePriceOracle {
 }
 
 interface AaveIncentivesInterface {
+    struct AssetData {
+        uint128 emissionPerSecond;
+        uint128 lastUpdateTimestamp;
+        uint256 index;
+    }
+
     function getRewardsBalance(
         address[] calldata assets,
         address user
     ) external view returns (uint256);
+
+    function assets(
+        address asset
+    ) external view returns (AssetData memory);
 }
 
 interface ChainLinkInterface {
@@ -198,9 +212,12 @@ contract AaveHelpers is DSMath {
         bool stableBorrowEnabled;
         bool isActive;
         bool isFrozen;
+        uint totalSupply;
         uint availableLiquidity;
         uint totalStableDebt;
         uint totalVariableDebt;
+        uint collateralEmission;
+        uint debtEmission;
     }
 
      struct TokenPrice {
@@ -237,6 +254,21 @@ contract AaveHelpers is DSMath {
             aaveTokenData.isActive,
             aaveTokenData.isFrozen
         ) = aaveData.getReserveConfigurationData(token);
+
+        (
+            address aToken,
+            ,
+            address debtToken
+        ) = aaveData.getReserveTokensAddresses(token);
+
+        AaveIncentivesInterface.AssetData memory _data;
+        AaveIncentivesInterface incentives = AaveIncentivesInterface(getAaveIncentivesAddress());
+
+        _data = incentives.assets(aToken);
+        aaveTokenData.collateralEmission = _data.emissionPerSecond;
+        _data = incentives.assets(debtToken);
+        aaveTokenData.debtEmission = _data.emissionPerSecond;
+        aaveTokenData.totalSupply = TokenInterface(aToken).totalSupply();
     }
 
     function getTokenData(
@@ -337,5 +369,5 @@ contract Resolver is AaveHelpers {
 }
 
 contract InstaAaveV2Resolver is Resolver {
-    string public constant name = "AaveV2-Resolver-v1.5";
+    string public constant name = "AaveV2-Resolver-v1.6";
 }
