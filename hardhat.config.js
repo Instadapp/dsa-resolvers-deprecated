@@ -31,17 +31,22 @@ module.exports = {
       {
         version: "0.7.3"
       }
-    ]
+    ],
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
   },
   networks: {
     hardhat: {
       forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/" + ALCHEMY_API_KEY
+        url: "https://eth-mainnet.alchemyapi.io/v2/" + ALCHEMY_API_KEY,
+        blockNumber: 12386345
       }
     }
   },
   mocha: {
-    timeout: 50000,
+    timeout: 100000,
   }
 };
 

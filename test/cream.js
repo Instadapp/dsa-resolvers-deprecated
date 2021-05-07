@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
 describe("InstaCreamResolver", function () {
   let cream;
@@ -13,7 +14,12 @@ describe("InstaCreamResolver", function () {
     await cream.deployed();
   });
 
-  it("should fetch cream data from CrUSDT", async function () {
+  it("should fetch cream data for CrUSDT", async function () {
     expect(await cream.getCreamData(signer.address, [CrUSDT])).to.exist;
+  });
+
+  it("should fetch cream position for CrUSDT", async function () {
+    const res = await cream.callStatic.getPosition(signer.address, [CrUSDT]);
+    expect(res).to.exist
   });
 });
