@@ -213,11 +213,14 @@ contract Resolver is Helpers {
 
     function getPosition(address owner, address[] memory crAddress)
         public
-        returns (CreamData[] memory)
-    // CompReadInterface.CompBalanceMetadataExt memory
+        returns (
+            CreamData[] memory,
+            CompReadInterface.CompBalanceMetadataExt memory
+        )
     {
         return (
-            getCreamData(owner, crAddress)
+            getCreamData(owner, crAddress),
+            CompReadInterface.CompBalanceMetadataExt(0, 0, address(0), 0)
             // CompReadInterface(getCreamReadAddress()).getCompBalanceMetadataExt(
             //     getCreamToken(),
             //     getComptroller(),
