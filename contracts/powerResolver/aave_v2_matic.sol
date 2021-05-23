@@ -109,7 +109,7 @@ contract Helpers is DSMath {
     }
 
     struct TokenPrice {
-        uint256 priceInMatic;
+        uint256 priceInEth;
         uint256 priceInUsd;
     }
 
@@ -177,27 +177,27 @@ contract InstaAaveV2PowerResolver is Helpers {
     function getTokensPrices(address[] calldata tokens)
         external
         view
-        returns (TokenPrice[] memory tokenPrices, uint256 maticPrice)
+        returns (TokenPrice[] memory tokenPrices, uint256 ethPrice)
     {
         AaveAddressProvider aaveAddressProvider =
             AaveAddressProvider(getAaveAddressProvider());
         uint256[] memory _tokenPrices =
             AavePriceOracle(aaveAddressProvider.getPriceOracle())
                 .getAssetsPrices(tokens);
-        maticPrice = uint256(
+        ethPrice = uint256(
             ChainLinkInterface(getChainlinkMaticFeed()).latestAnswer()
         );
         tokenPrices = new TokenPrice[](_tokenPrices.length);
         for (uint256 i = 0; i < _tokenPrices.length; i++) {
             tokenPrices[i] = TokenPrice(
                 _tokenPrices[i],
-                wmul(_tokenPrices[i], uint256(maticPrice) * 10**10)
+                wmul(_tokenPrices[i], uint256(ethPrice) * 10**10)
             );
         }
     }
 
-    function getMaticPrice() public view returns (uint256 maticPrice) {
-        maticPrice = uint256(
+    function getEthPrice() public view returns (uint256 ethPrice) {
+        ethPrice = uint256(
             ChainLinkInterface(getChainlinkMaticFeed()).latestAnswer()
         );
     }
