@@ -1,6 +1,5 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
-import "hardhat/console.sol";
 
 import {DSMath} from "./common/math.sol";
 
@@ -66,7 +65,6 @@ contract VaultResolver is Variables, DSMath {
 
         uint256 supply = wmul(ink, price);
         uint256 borrow = rmul(art, rate);
-        borrow = borrow / 1e9;
 
         networth = sub(supply, borrow);
     }
