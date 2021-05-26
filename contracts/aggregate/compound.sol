@@ -1,33 +1,51 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import { DSMath } from "../../common/math.sol";
+import {DSMath} from "./common/math.sol";
 
 interface CTokenInterface {
-    function exchangeRateCurrent() external returns (uint);
-    function borrowBalanceCurrent(address account) external returns (uint);
-    function balanceOfUnderlying(address account) external returns (uint);
+    function exchangeRateCurrent() external returns (uint256);
+
+    function borrowBalanceCurrent(address account) external returns (uint256);
+
+    function balanceOfUnderlying(address account) external returns (uint256);
 
     function underlying() external view returns (address);
-    function balanceOf(address) external view returns (uint);
+
+    function balanceOf(address) external view returns (uint256);
 }
 
 interface OracleCompInterface {
-    function getUnderlyingPrice(address) external view returns (uint);
+    function getUnderlyingPrice(address) external view returns (uint256);
 }
 
 interface ComptrollerLensInterface {
-    function markets(address) external view returns (bool, uint, bool);
+    function markets(address)
+        external
+        view
+        returns (
+            bool,
+            uint256,
+            bool
+        );
+
     function oracle() external view returns (address);
 }
 
 contract Variables {
-    ComptrollerLensInterface public constant comptroller = ComptrollerLensInterface(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    ComptrollerLensInterface public constant comptroller =
+        ComptrollerLensInterface(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
 
-    address public constant cethAddr = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    address public constant cethAddr =
+        0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
     uint256 public constant markets = 12;
-    function getAllMarkets() public pure returns (bytes20[markets] memory _markets) {
+
+    function getAllMarkets()
+        public
+        pure
+        returns (bytes20[markets] memory _markets)
+    {
         _markets = [
             bytes20(0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E), // cBAT
             bytes20(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643), // cDAI
@@ -48,13 +66,16 @@ contract Variables {
 }
 
 contract Resolver is Variables, DSMath {
-    function getCompoundNetworth(address account) internal returns (uint256 networth) {
+    function getCompoundNetworth(address account)
+        internal
+        returns (uint256 networth)
+    {
         bytes20[markets] memory allMarkets = getAllMarkets();
         OracleCompInterface oracle = OracleCompInterface(comptroller.oracle());
         uint256 totalBorrowInUsd = 0;
         uint256 totalSupplyInUsd = 0;
 
-        for (uint i = 0; i < markets; i++) {
+        for (uint256 i = 0; i < markets; i++) {
             CTokenInterface cToken = CTokenInterface(address(allMarkets[i]));
             uint256 priceInUSD = oracle.getUnderlyingPrice(address(cToken));
             uint256 supply = cToken.balanceOfUnderlying(account);
@@ -69,10 +90,12 @@ contract Resolver is Variables, DSMath {
         networth = sub(totalSupplyInUsd, totalBorrowInUsd);
     }
 
-    function getPosition(address account) external returns (uint256 networthInUsd) {
+    function getPosition(address account)
+        external
+        returns (uint256 networthInUsd)
+    {
         return getCompoundNetworth(account);
     }
-
 }
 
 contract InstaCompoundAggregateResolver is Resolver {

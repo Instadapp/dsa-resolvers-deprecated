@@ -23,14 +23,17 @@ task("accounts", "Prints the list of accounts", async () => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
+  paths: {
+    sources: "./contracts/aggregate",
+  },
   solidity: {
     compilers: [
       {
-        version: "0.6.10"
+        version: "0.6.10",
       },
       {
-        version: "0.7.3"
-      }
+        version: "0.7.3",
+      },
     ],
     optimizer: {
       enabled: true,
@@ -41,12 +44,11 @@ module.exports = {
     hardhat: {
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/" + ALCHEMY_API_KEY,
-        blockNumber: 12386345
-      }
-    }
+        blockNumber: 12510580,
+      },
+    },
   },
   mocha: {
     timeout: 100000,
-  }
+  },
 };
-
