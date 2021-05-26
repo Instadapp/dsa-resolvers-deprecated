@@ -1,7 +1,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import { DSMath } from "../../../common/math.sol";
+import { DSMath } from "../../common/math.sol";
 
 interface CTokenInterface {
     function exchangeRateCurrent() external returns (uint);

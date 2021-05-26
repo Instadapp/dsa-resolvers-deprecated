@@ -1,7 +1,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import { DSMath } from "../../../common/math.sol";
+import { DSMath } from "../../common/math.sol";
 interface ManagerLike {
     function ilks(uint) external view returns (bytes32);
     function owns(uint) external view returns (address);
