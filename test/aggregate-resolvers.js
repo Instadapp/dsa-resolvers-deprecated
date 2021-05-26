@@ -23,8 +23,9 @@ describe("Resolver getPosition", function () {
 
   it("should get position for compound", async function () {
     const account = "0x005280119e7070fd1999703ec606c5e97b146e84";
-    const tx = compound.getPosition(account);
-    expect(tx).to.satisfy;
+    const res = await compound.callStatic.getPosition(account);
+    console.log(res.toString());
+    expect(res).gt(0);
   });
 
   it("should get position for aaveV2", async function () {
