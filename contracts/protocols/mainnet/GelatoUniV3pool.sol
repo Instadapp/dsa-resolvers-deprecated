@@ -3,7 +3,8 @@ pragma experimental ABIEncoderV2;
 
 
 interface IERC20 {
-
+    function balanceOf(address) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
 }
 
 interface IGUniPool {
@@ -17,35 +18,19 @@ interface IGUniPool {
 
     function balanceOf(address account) external view returns (uint256);
 
-    // function mint(uint256 mintAmount, address receiver)
-    //     external
-    //     returns (
-    //         uint256 amount0,
-    //         uint256 amount1,
-    //         uint128 liquidityMinted
-    //     );
+    function getMintAmounts(uint256 amount0Max, uint256 amount1Max)
+        external
+        view
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 mintAmount
+        );
 
-    // function burn(uint256 burnAmount, address receiver)
-    //     external
-    //     returns (
-    //         uint256 amount0,
-    //         uint256 amount1,
-    //         uint128 liquidityBurned
-    //     );
-
-    // function getMintAmounts(uint256 amount0Max, uint256 amount1Max)
-    //     external
-    //     view
-    //     returns (
-    //         uint256 amount0,
-    //         uint256 amount1,
-    //         uint256 mintAmount
-    //     );
-
-    // function getPositionID() external view returns (bytes32 positionID);
+    function getPositionID() external view returns (bytes32 positionID);
 }
 
-interface IGUniRouter {
+interface GUniResolver {
 
     function getPoolUnderlyingBalances(IGUniPool pool)
         external
@@ -54,9 +39,19 @@ interface IGUniRouter {
 
     function getUnderlyingBalances(
         IGUniPool pool,
-        address account,
         uint256 balance
     ) external view returns (uint256 amount0, uint256 amount1);
+
+    function getRebalanceParams(
+        IGUniPool pool,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint16 slippageBPS
+    ) external view returns (
+        bool zeroForOne,
+        uint256 swapAmount,
+        uint160 swapThreshold
+    );
 
 }
 
@@ -108,7 +103,7 @@ contract DSMath {
 contract Helpers is DSMath {
 
     StakingFactoryInterface public constant getStakingFactory = StakingFactoryInterface(0xf39eC5a471edF20Ecc7db1c2c34B4C73ab4B2C19);
-    IGUniRouter public constant gelatoRouter = IGUniRouter(0x8CA6fa325bc32f86a12cC4964Edf1f71655007A7);
+    GUniResolver public constant gelatoRouter = GUniResolver(address(0));
 
     struct UserData {
         address pool; // address of pool contract
@@ -150,11 +145,11 @@ contract Resolver is Helpers {
         }
         _data.poolBal = poolContract.balanceOf(user);
         _data.totalBal = add(_data.stakedBal, _data.poolBal);
-        (_data.token0Bal, _data.token1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, user, _data.totalBal);
+        (_data.token0Bal, _data.token1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, _data.totalBal);
         _data.poolTokenSupply = poolContract.balanceOf(user);
         (_data.poolToken0Bal, _data.poolToken1Bal) = gelatoRouter.getPoolUnderlyingBalances(poolContract);
         _data.poolTokenSupplyStaked = stakingContract.totalSupply();
-        (_data.stakingToken0Bal, _data.stakingToken1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, _data.staking, _data.poolTokenSupplyStaked);
+        (_data.stakingToken0Bal, _data.stakingToken1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, _data.poolTokenSupplyStaked);
         _data.rewardRate = stakingContract.rewardRate();
     }
 
@@ -162,6 +157,34 @@ contract Resolver is Helpers {
         for (uint i = 0; i < pools.length; i++) {
             _data[i] = getSinglePosition(user, pools[i]);
         }
+    }
+
+    // @param slippage in 18 decimal where 100% = 1e18.
+    function getSwapAndDepositParams(
+        address pool, 
+        uint amount0In,
+        uint amount1In,
+        uint slippage
+    ) public view returns (
+        bool zeroForOne,
+        uint256 swapAmount,
+        uint160 swapThreshold
+    ) {
+        uint slippageBPS = slippage / 1e16;
+        (zeroForOne, swapAmount, swapThreshold) = gelatoRouter.getRebalanceParams(IGUniPool(pool), amount0In, amount1In, uint16(slippageBPS));
+    }
+
+    /**
+     * @param burnPercent in 18 decimal where 100% = 1e18.
+     * @param slippage in 18 decimal where 100% = 1e18.
+    */
+    function getWithdrawParams(address user, address pool, uint burnPercent, uint slippage) public view returns (uint burnAmt, uint amount0, uint amount1, uint amount0Min, uint amount1Min) {
+        UserData memory _data = getSinglePosition(user, pool);
+        burnAmt = wmul(_data.totalBal, burnPercent);
+        amount0 = wmul(_data.token0Bal, burnPercent);
+        amount1 = wmul(_data.token1Bal, burnPercent);
+        amount0Min = wmul(amount0, sub(1e18, slippage));
+        amount1Min = wmul(amount1, sub(1e18, slippage));
     }
 
 }
