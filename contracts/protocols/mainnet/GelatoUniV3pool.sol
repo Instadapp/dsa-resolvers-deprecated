@@ -71,6 +71,8 @@ interface StakingFactoryInterface {
 }
 
 interface StakingInterface {
+    function totalSupply() external view returns (uint256);
+    function rewardRate() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
     function earned(address account) external view returns (uint256);
     function rewardPerToken() external view returns (uint256);
@@ -113,10 +115,15 @@ contract Helpers is DSMath {
         address staking; // address of staking contract
         address token0Addr; // address of token 0
         address token1Addr; // address of token 1
-        uint token0Bal; // balance of token 0
-        uint token1Bal; // balance of token 1
+        uint poolTokenSupply; // Total supply of Pool token
         uint poolToken0Bal; // balance of total pool for token0
         uint poolToken1Bal; // balance of total pool for token1
+        uint poolTokenSupplyStaked; // total pool token locked in staking contract
+        uint stakingToken0Bal; // total balance of token0 in Staking
+        uint stakingToken1Bal; // total balance of token1 in Staking
+        uint rewardRate; // INST distributing per second
+        uint token0Bal; // balance of token 0 of user
+        uint token1Bal; // balance of token 1 of user
         uint earned; // INST earned from staking
         uint stakedBal; // user's pool token bal in staking contract
         uint poolBal; // ideal pool token in user's DSA
@@ -128,6 +135,7 @@ contract Helpers is DSMath {
 contract Resolver is Helpers {
 
     function getSinglePosition(address user, address pool) public view returns(UserData memory _data) {
+        _data.pool = pool;
         StakingInterface stakingContract = StakingInterface(getStakingFactory.stakingRewardsInfoByStakingToken(pool).stakingRewards);
         _data.staking = address(stakingContract);
         IGUniPool poolContract = IGUniPool(pool);
@@ -143,7 +151,11 @@ contract Resolver is Helpers {
         _data.poolBal = poolContract.balanceOf(user);
         _data.totalBal = add(_data.stakedBal, _data.poolBal);
         (_data.token0Bal, _data.token1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, user, _data.totalBal);
+        _data.poolTokenSupply = poolContract.balanceOf(user);
         (_data.poolToken0Bal, _data.poolToken1Bal) = gelatoRouter.getPoolUnderlyingBalances(poolContract);
+        _data.poolTokenSupplyStaked = stakingContract.totalSupply();
+        (_data.stakingToken0Bal, _data.stakingToken1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, _data.staking, _data.poolTokenSupplyStaked);
+        _data.rewardRate = stakingContract.rewardRate();
     }
 
     function getPosition(address user, address[] memory pools) public view returns(UserData[] memory _data) {
@@ -151,9 +163,5 @@ contract Resolver is Helpers {
             _data[i] = getSinglePosition(user, pools[i]);
         }
     }
-
-
-    // TODO: Add function to calculate current INST APY on pools
-    // Use rewardPerToken()
 
 }
