@@ -12,7 +12,7 @@ interface IGUniPool {
 
     function token1() external view returns (IERC20);
 
-    // function pool() external view returns (IUniswapV3Pool);
+    function pool() external view returns (IUniswapV3Pool);
 
     function totalSupply() external view returns (uint256);
 
@@ -103,7 +103,7 @@ contract DSMath {
 contract Helpers is DSMath {
 
     StakingFactoryInterface public constant getStakingFactory = StakingFactoryInterface(0xf39eC5a471edF20Ecc7db1c2c34B4C73ab4B2C19);
-    GUniResolver public constant gelatoRouter = GUniResolver(address(0));
+    GUniResolver public constant gelatoRouter = GUniResolver(0xC8b92036cf2bfc5aD2116c9b9Fb3cee2d3b3dc89);
 
     struct UserData {
         address pool; // address of pool contract
