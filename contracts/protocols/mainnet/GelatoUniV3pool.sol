@@ -157,7 +157,15 @@ contract Resolver is Helpers {
         }
     }
 
-    // @param slippage in 18 decimal where 100% = 1e18.
+    /**
+    * @param pool - gelato pool address.
+    * @param amount0In - amount of token0 user wants to deposit.
+    * @param amount1In - amount of token1 user wants to deposit.
+    * @param slippage in 18 decimal where 100% = 1e18.
+    * @return zeroForOne - if true swap token0 for token1 else vice versa
+    * @return swapAmount - Amount of tokens to swap.
+    * @return swapThreshold - Max slippage that the swap can take.
+    */
     function getSwapAndDepositParams(
         address pool, 
         uint amount0In,
@@ -173,8 +181,15 @@ contract Resolver is Helpers {
     }
 
     /**
-     * @param burnPercent in 18 decimal where 100% = 1e18.
+     * @param user - address of user.
+     * @param pool - address of Gelato Pool.
+     * @param burnPercent - in 18 decimal where 100% = 1e18.
      * @param slippage in 18 decimal where 100% = 1e18.
+     * @return burnAmount - Amount of pool tokens to burn.
+     * @return amount0 - Amount of token0 user will get.
+     * @return amount1 - Amount of token1 user will get.
+     * @return amount0Min - Min amount of token0 user should get.
+     * @return amount0Min - Min amount of token1 user should get.
     */
     function getWithdrawParams(address user, address pool, uint burnPercent, uint slippage) public view returns (uint burnAmt, uint amount0, uint amount1, uint amount0Min, uint amount1Min) {
         UserData memory _data = getSinglePosition(user, pool);
