@@ -12,8 +12,6 @@ interface IGUniPool {
 
     function token1() external view returns (IERC20);
 
-    function pool() external view returns (IUniswapV3Pool);
-
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
