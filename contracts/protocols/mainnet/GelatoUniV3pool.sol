@@ -178,6 +178,7 @@ contract Resolver is Helpers {
     */
     function getWithdrawParams(address user, address pool, uint burnPercent, uint slippage) public view returns (uint burnAmt, uint amount0, uint amount1, uint amount0Min, uint amount1Min) {
         UserData memory _data = getSinglePosition(user, pool);
+        burnPercent = burnPercent > 1e18 ? 1e18 : burnPercent;
         burnAmt = wmul(_data.totalBal, burnPercent);
         amount0 = wmul(_data.token0Bal, burnPercent);
         amount1 = wmul(_data.token1Bal, burnPercent);
