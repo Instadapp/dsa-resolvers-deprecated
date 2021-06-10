@@ -152,6 +152,7 @@ contract Resolver is Helpers {
     }
 
     function getPosition(address user, address[] memory pools) public view returns(UserData[] memory _data) {
+        _data = new UserData[](pools.length);
         for (uint i = 0; i < pools.length; i++) {
             _data[i] = getSinglePosition(user, pools[i]);
         }
