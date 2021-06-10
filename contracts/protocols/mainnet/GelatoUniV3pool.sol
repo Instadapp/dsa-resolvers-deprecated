@@ -186,11 +186,11 @@ contract Resolver is Helpers {
      * @param pool - address of Gelato Pool.
      * @param burnPercent - in 18 decimal where 100% = 1e18.
      * @param slippage in 18 decimal where 100% = 1e18.
-     * @return burnAmount - Amount of pool tokens to burn.
+     * @return burnAmt - Amount of pool tokens to burn.
      * @return amount0 - Amount of token0 user will get.
      * @return amount1 - Amount of token1 user will get.
      * @return amount0Min - Min amount of token0 user should get.
-     * @return amount0Min - Min amount of token1 user should get.
+     * @return amount1Min - Min amount of token1 user should get.
     */
     function getWithdrawParams(address user, address pool, uint burnPercent, uint slippage) public view returns (uint burnAmt, uint amount0, uint amount1, uint amount0Min, uint amount1Min) {
         UserData memory _data = getSinglePosition(user, pool);
