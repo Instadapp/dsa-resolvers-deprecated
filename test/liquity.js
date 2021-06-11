@@ -24,6 +24,13 @@ const expectedStakePosition = [
   /* ethGain */ BigNumber.from("18910541408996344243"),
   /* lusdGain */ BigNumber.from("66201062534511228032281"),
 ];
+
+const expectedSystemState = [
+  /* borrowFee */ BigNumber.from("6900285109012952"),
+  /* ethTvl */ BigNumber.from("852500462432421494350957"),
+  /* tcr */ BigNumber.from("3232993993257432140"),
+  /* isInRecoveryMode */ false,
+];
 /* End: Mock test data */
 
 describe("InstaLiquityResolver", () => {
@@ -76,6 +83,13 @@ describe("InstaLiquityResolver", () => {
         expectedStakePosition,
       ];
       expect(position).to.eql(expectedPosition);
+    });
+  });
+
+  describe("getSystemState()", () => {
+    it("returns Liquity system state", async () => {
+      const systemState = await liquity.getSystemState();
+      expect(systemState).to.eql(expectedSystemState);
     });
   });
 });

@@ -2,7 +2,10 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 interface TroveManagerLike {
+  function getBorrowingRateWithDecay() external view returns (uint);
+  function getTCR(uint _price) external view returns (uint);
   function getCurrentICR(address _borrower, uint _price) external view returns (uint);
+  function checkRecoveryMode(uint _price) external view returns (bool);
   function getEntireDebtAndColl(address _borrower) external view returns (
     uint debt, 
     uint coll, 
@@ -27,7 +30,13 @@ abstract contract PriceFeedLike {
   uint public lastGoodPrice;
 }
 
-contract Helpers {
+contract DSMath {
+  function add(uint x, uint y) internal pure returns (uint z) {
+    require((z = x + y) >= x, "math-not-safe");
+  }
+}
+
+contract Helpers is DSMath {
   TroveManagerLike internal constant troveManager =
     TroveManagerLike(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
 
@@ -40,6 +49,10 @@ contract Helpers {
   PriceFeedLike internal constant priceFeed = 
     PriceFeedLike(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
   
+  address constant activePoolAddress = 0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F;
+  
+  address constant defaultPoolAddress = 0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C;
+
   struct Trove {
     uint collateral;
     uint debt;
@@ -63,14 +76,21 @@ contract Helpers {
     StabilityDeposit stability;
     Stake stake;
   }
+
+  struct System {
+    uint borrowFee;
+    uint ethTvl;
+    uint tcr;
+    bool isInRecoveryMode;
+  }
 }
 
 
 contract Resolver is Helpers {
   function getTrove(address owner) public view returns (Trove memory) {
     (uint debt, uint collateral, uint _, uint __) = troveManager.getEntireDebtAndColl(owner);
-    uint price = priceFeed.lastGoodPrice();
-    uint icr = troveManager.getCurrentICR(owner, price);
+    uint ethPrice = priceFeed.lastGoodPrice();
+    uint icr = troveManager.getCurrentICR(owner, ethPrice);
     return Trove(collateral, debt, icr);
   }
 
@@ -93,6 +113,15 @@ contract Resolver is Helpers {
     StabilityDeposit memory stability = getStabilityDeposit(owner);
     Stake memory stake = getStake(owner);
     return Position(trove, stability, stake);
+  }
+
+  function getSystemState() external view returns (System memory) {
+    uint borrowFee = troveManager.getBorrowingRateWithDecay();
+    uint ethTvl = add(activePoolAddress.balance, defaultPoolAddress.balance);
+    uint ethPrice = priceFeed.lastGoodPrice();
+    uint tcr = troveManager.getTCR(ethPrice);
+    bool isInRecoveryMode = troveManager.checkRecoveryMode(ethPrice);
+    return System(borrowFee, ethTvl, tcr, isInRecoveryMode);
   }
 }
 
