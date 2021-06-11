@@ -5,12 +5,32 @@ pragma experimental ABIEncoderV2;
 interface IERC20 {
     function balanceOf(address) external view returns (uint256);
     function totalSupply() external view returns (uint256);
+    function decimals() external view returns (uint256);
+}
+
+interface IUniswapV3Pool {
+
+    function slot0()
+        external
+        view
+        returns (
+            uint160 sqrtPriceX96,
+            int24 tick,
+            uint16 observationIndex,
+            uint16 observationCardinality,
+            uint16 observationCardinalityNext,
+            uint8 feeProtocol,
+            bool unlocked
+        );
+
 }
 
 interface IGUniPool {
     function token0() external view returns (IERC20);
 
     function token1() external view returns (IERC20);
+
+    function pool() external view returns (IUniswapV3Pool);
 
     function totalSupply() external view returns (uint256);
 
@@ -26,6 +46,12 @@ interface IGUniPool {
         );
 
     function getPositionID() external view returns (bytes32 positionID);
+
+    function lowerTick() external view returns (int24);
+
+    function upperTick() external view returns (int24);
+
+
 }
 
 interface GUniResolver {
@@ -121,6 +147,11 @@ contract Helpers is DSMath {
         uint stakedBal; // user's pool token bal in staking contract
         uint poolBal; // ideal pool token in user's DSA
         uint totalBal; // stakedBal + poolTknBal
+        uint token0Decimals;
+        uint token1Decimals;
+        int24 currentTick;
+        int24 lowerTick;
+        int24 upperTick;
     }
 
 }
@@ -149,6 +180,14 @@ contract Resolver is Helpers {
         _data.poolTokenSupplyStaked = stakingContract.totalSupply();
         (_data.stakingToken0Bal, _data.stakingToken1Bal) = gelatoRouter.getUnderlyingBalances(poolContract, _data.poolTokenSupplyStaked);
         _data.rewardRate = stakingContract.rewardRate();
+
+        _data.token0Decimals = poolContract.token0().decimals();
+        _data.token1Decimals = poolContract.token1().decimals();
+
+        IUniswapV3Pool uniNft = poolContract.pool();
+        (, _data.currentTick, , , , , ) = uniNft.slot0();
+        _data.lowerTick = poolContract.lowerTick();
+        _data.upperTick = poolContract.upperTick();
     }
 
     function getPosition(address user, address[] memory pools) public view returns(UserData[] memory _data) {
