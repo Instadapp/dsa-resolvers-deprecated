@@ -147,11 +147,11 @@ contract Helpers is DSMath {
         uint stakedBal; // user's pool token bal in staking contract
         uint poolBal; // ideal pool token in user's DSA
         uint totalBal; // stakedBal + poolTknBal
-        uint token0Decimals;
-        uint token1Decimals;
-        int24 currentTick;
-        int24 lowerTick;
-        int24 upperTick;
+        uint token0Decimals; // token0 decimals
+        uint token1Decimals; // token1 decimals
+        int24 currentTick; // Current price of 1 token w.r.t to other
+        int24 lowerTick; // Price of 1 token w.r.t to other at lower tick
+        int24 upperTick; // Price of 1 token w.r.t to other at upper tick
     }
 
 }
