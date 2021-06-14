@@ -20,14 +20,14 @@ interface StabilityPoolLike {
   function getDepositorLQTYGain(address _depositor) external view returns (uint);
 }
 
-abstract contract StakingLike {
-  mapping(address => uint) public stakes;
-  function getPendingETHGain(address _user) external virtual view returns (uint);
-  function getPendingLUSDGain(address _user) external virtual view returns (uint);
+interface StakingLike {
+  function stakes(address owner) external view returns (uint);
+  function getPendingETHGain(address _user) external view returns (uint);
+  function getPendingLUSDGain(address _user) external view returns (uint);
 }
 
-abstract contract PriceFeedLike {
-  uint public lastGoodPrice;
+interface PoolLike {
+  function getETH() external view returns (uint);
 }
 
 contract DSMath {
@@ -46,12 +46,11 @@ contract Helpers is DSMath {
   StakingLike internal constant staking =
     StakingLike(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d);
 
-  PriceFeedLike internal constant priceFeed = 
-    PriceFeedLike(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
+  PoolLike internal constant activePool =
+    PoolLike(0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F);
   
-  address constant activePoolAddress = 0xDf9Eb223bAFBE5c5271415C75aeCD68C21fE3D7F;
-  
-  address constant defaultPoolAddress = 0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C;
+  PoolLike internal constant defaultPool =
+    PoolLike(0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C);
 
   struct Trove {
     uint collateral;
@@ -87,10 +86,9 @@ contract Helpers is DSMath {
 
 
 contract Resolver is Helpers {
-  function getTrove(address owner) public view returns (Trove memory) {
-    (uint debt, uint collateral, uint _, uint __) = troveManager.getEntireDebtAndColl(owner);
-    uint ethPrice = priceFeed.lastGoodPrice();
-    uint icr = troveManager.getCurrentICR(owner, ethPrice);
+  function getTrove(address owner, uint oracleEthPrice) public view returns (Trove memory) {
+    (uint debt, uint collateral, , ) = troveManager.getEntireDebtAndColl(owner);
+    uint icr = troveManager.getCurrentICR(owner, oracleEthPrice);
     return Trove(collateral, debt, icr);
   }
 
@@ -108,19 +106,18 @@ contract Resolver is Helpers {
     return Stake(amount, ethGain, lusdGain);
   }
 
-  function getPosition(address owner) external view returns (Position memory) {
-    Trove memory trove = getTrove(owner);
+  function getPosition(address owner, uint oracleEthPrice) external view returns (Position memory) {
+    Trove memory trove = getTrove(owner, oracleEthPrice);
     StabilityDeposit memory stability = getStabilityDeposit(owner);
     Stake memory stake = getStake(owner);
     return Position(trove, stability, stake);
   }
 
-  function getSystemState() external view returns (System memory) {
+  function getSystemState(uint oracleEthPrice) external view returns (System memory) {
     uint borrowFee = troveManager.getBorrowingRateWithDecay();
-    uint ethTvl = add(activePoolAddress.balance, defaultPoolAddress.balance);
-    uint ethPrice = priceFeed.lastGoodPrice();
-    uint tcr = troveManager.getTCR(ethPrice);
-    bool isInRecoveryMode = troveManager.checkRecoveryMode(ethPrice);
+    uint ethTvl = add(activePool.getETH(), defaultPool.getETH());
+    uint tcr = troveManager.getTCR(oracleEthPrice);
+    bool isInRecoveryMode = troveManager.checkRecoveryMode(oracleEthPrice);
     return System(borrowFee, ethTvl, tcr, isInRecoveryMode);
   }
 }

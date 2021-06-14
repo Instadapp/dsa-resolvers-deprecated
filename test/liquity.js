@@ -8,11 +8,15 @@ const BLOCK_NUMBER = 12478959;
 // Liquity user with a Trove, Stability deposit, and Stake
 const JUSTIN_SUN_ADDRESS = "0x903d12bf2c57a29f32365917c706ce0e1a84cce3";
 
+// Liquity price oracle
+const PRICE_FEED_ADDRESS = "0x4c517D4e2C851CA76d7eC94B805269Df0f2201De";
+const PRICE_FEED_ABI = ["function fetchPrice() external returns (uint)"];
+
 /* Begin: Mock test data (based on specified BLOCK_NUMBER and JUSTIN_SUN_ADDRESS) */
 const expectedTrovePosition = [
   /* collateral */ BigNumber.from("582880000000000000000000"),
   /* debt */ BigNumber.from("372000200000000000000000000"),
-  /* icr */ BigNumber.from("3839454035181671407"),
+  /* icr */ BigNumber.from("3859882210893925325"),
 ];
 const expectedStabilityPosition = [
   /* deposit */ BigNumber.from("299979329615565997640451998"),
@@ -28,22 +32,29 @@ const expectedStakePosition = [
 const expectedSystemState = [
   /* borrowFee */ BigNumber.from("6900285109012952"),
   /* ethTvl */ BigNumber.from("852500462432421494350957"),
-  /* tcr */ BigNumber.from("3232993993257432140"),
+  /* tcr */ BigNumber.from("3250195441371082828"),
   /* isInRecoveryMode */ false,
 ];
 /* End: Mock test data */
 
 describe("InstaLiquityResolver", () => {
   let liquity;
+  let liquityPriceOracle;
 
   before(async () => {
     await resetHardhatBlockNumber(BLOCK_NUMBER); // Start tests from clean mainnet fork at BLOCK_NUMBER
 
-    const LiquityFactory = await hre.ethers.getContractFactory(
+    const liquityFactory = await hre.ethers.getContractFactory(
       "InstaLiquityResolver"
     );
 
-    liquity = await LiquityFactory.deploy();
+    liquityPriceOracle = new hre.ethers.Contract(
+      PRICE_FEED_ADDRESS,
+      PRICE_FEED_ABI,
+      hre.ethers.provider
+    );
+
+    liquity = await liquityFactory.deploy();
     await liquity.deployed();
   });
 
@@ -53,7 +64,11 @@ describe("InstaLiquityResolver", () => {
 
   describe("getTrove()", () => {
     it("returns a user's Trove position", async () => {
-      const trovePosition = await liquity.getTrove(JUSTIN_SUN_ADDRESS);
+      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
+      const trovePosition = await liquity.getTrove(
+        JUSTIN_SUN_ADDRESS,
+        oracleEthPrice
+      );
       expect(trovePosition).to.eql(expectedTrovePosition);
     });
   });
@@ -76,7 +91,11 @@ describe("InstaLiquityResolver", () => {
 
   describe("getPosition()", () => {
     it("returns a user's Liquity position", async () => {
-      const position = await liquity.getPosition(JUSTIN_SUN_ADDRESS);
+      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
+      const position = await liquity.getPosition(
+        JUSTIN_SUN_ADDRESS,
+        oracleEthPrice
+      );
       const expectedPosition = [
         expectedTrovePosition,
         expectedStabilityPosition,
@@ -88,7 +107,8 @@ describe("InstaLiquityResolver", () => {
 
   describe("getSystemState()", () => {
     it("returns Liquity system state", async () => {
-      const systemState = await liquity.getSystemState();
+      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
+      const systemState = await liquity.getSystemState(oracleEthPrice);
       expect(systemState).to.eql(expectedSystemState);
     });
   });
