@@ -12,7 +12,7 @@ import {
     TokenInterface
 } from "./interface.sol";
 
-contract Helpers is DSMath {
+abstract contract Helpers is DSMath {
     /**
      * @dev Return ethereum address
      */

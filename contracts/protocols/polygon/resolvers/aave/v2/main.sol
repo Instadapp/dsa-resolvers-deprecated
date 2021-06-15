@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 import { Helpers } from "./helpers.sol";
 import { AaveAddressProvider, AaveProtocolDataProvider, AaveLendingPool } from "./interface.sol";
 
-contract Resolver is Helpers {
+abstract contract Resolver is Helpers {
     function getPosition(address user, address[] memory tokens) public view returns(AaveUserTokenData[] memory, AaveUserData memory) {
         AaveAddressProvider addrProvider = AaveAddressProvider(getAaveAddressProvider());
         uint length = tokens.length;

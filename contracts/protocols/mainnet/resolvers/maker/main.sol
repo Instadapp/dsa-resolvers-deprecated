@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 import {Helpers} from "./helpers.sol";
 import {InstaMcdAddress, VatLike, CdpsLike, ManagerLike, PotLike} from "./interface.sol";
 
-contract VaultResolver is Helpers {
+abstract contract VaultResolver is Helpers {
     function getVaults(address owner)
         external
         view

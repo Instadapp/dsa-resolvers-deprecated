@@ -4,7 +4,7 @@ import {DSMath} from "../../common/math.sol";
 import {VatLike, SpotLike, JugLike, InstaMcdAddress} from "./interface.sol";
 
 
-contract Helpers is DSMath {
+abstract contract Helpers is DSMath {
     /**
      * @dev get MakerDAO MCD Address contract
      */
