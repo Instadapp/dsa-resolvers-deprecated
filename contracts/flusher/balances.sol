@@ -28,7 +28,7 @@ contract Resolver {
             tokensBal[i] = Balances({
                 flusher: flushers[i],
                 balance: bals,
-                isDeployed: isContractDeployed(flushers[i]);
+                isDeployed: isContractDeployed(flushers[i])
             });
         }
         return tokensBal;

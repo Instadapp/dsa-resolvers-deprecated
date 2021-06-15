@@ -63,6 +63,7 @@ build/contracts
 # buidler
 artifacts
 cache
+bin
 
 node_modules
 
