@@ -130,8 +130,8 @@ contract DSMath {
 
 contract Helpers is DSMath {
 
-    StakingFactoryInterface public getStakingFactory = StakingFactoryInterface(0xf39eC5a471edF20Ecc7db1c2c34B4C73ab4B2C19);
     GUniResolver public constant gelatoRouter = GUniResolver(0x3B01f3534c9505fE8e7cf42794a545A0d2ede976);
+    StakingFactoryInterface public getStakingFactory;
 
     function updateFactory(address _stakingFactory) public {
         require(msg.sender == IndexInterface(0x2971AdFa57b20E5a416aE5a708A8655A9c74f723).master(), "not-master");
@@ -250,5 +250,16 @@ contract Resolver is Helpers {
         amount0Min = wmul(amount0, sub(1e18, slippage));
         amount1Min = wmul(amount1, sub(1e18, slippage));
     }
+
+}
+
+contract InstaGUNIV3PoolResolver is Resolver {
+
+    constructor (address _stakingFactory) public {
+        getStakingFactory = StakingFactoryInterface(_stakingFactory);
+    }
+
+
+    string public constant name = "G-UNI-V3-Resolver-v1.0";
 
 }
