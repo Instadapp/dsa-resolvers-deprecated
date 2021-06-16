@@ -97,6 +97,10 @@ interface StakingInterface {
     function rewardPerToken() external view returns (uint256);
 }
 
+interface IndexInterface {
+    function master() external view returns (address);
+}
+
 
 contract DSMath {
 
@@ -126,8 +130,14 @@ contract DSMath {
 
 contract Helpers is DSMath {
 
-    StakingFactoryInterface public constant getStakingFactory = StakingFactoryInterface(0xf39eC5a471edF20Ecc7db1c2c34B4C73ab4B2C19);
-    GUniResolver public constant gelatoRouter = GUniResolver(0xC8b92036cf2bfc5aD2116c9b9Fb3cee2d3b3dc89);
+    StakingFactoryInterface public getStakingFactory = StakingFactoryInterface(0xf39eC5a471edF20Ecc7db1c2c34B4C73ab4B2C19);
+    GUniResolver public constant gelatoRouter = GUniResolver(0x3B01f3534c9505fE8e7cf42794a545A0d2ede976);
+
+    function updateFactory(address _stakingFactory) public {
+        require(msg.sender == IndexInterface(0x2971AdFa57b20E5a416aE5a708A8655A9c74f723).master(), "not-master");
+        require(address(getStakingFactory) != _stakingFactory, "already-enabled");
+        getStakingFactory = StakingFactoryInterface(_stakingFactory);
+    }
 
     struct UserData {
         address pool; // address of pool contract
