@@ -112,6 +112,45 @@ describe("InstaLiquityResolver", () => {
       expect(systemState).to.eql(expectedSystemState);
     });
   });
+
+  describe("getTrovePositionHints()", () => {
+    it("returns the upper and lower address of Troves nearest to the given Trove", async () => {
+      const collateral = hre.ethers.utils.parseEther("10");
+      const debt = hre.ethers.utils.parseUnits("5000", 18);
+      const searchIterations = 10;
+      const [upperHint, lowerHint] = await liquity.getTrovePositionHints(
+        collateral,
+        debt,
+        searchIterations
+      );
+
+      expect(upperHint).eq("0xbf9a4eCC4151f28C03100bA2C0555a3D3e439e69");
+      expect(lowerHint).eq("0xa4FC81A7AB93360543eb1e814D0127f466012CED");
+    });
+  });
+
+  describe("getRedemptionPositionHints()", () => {
+    it("returns the upper and lower address of the range of Troves to be redeemed against the given amount", async () => {
+      const amount = hre.ethers.utils.parseUnits("10000", 18); // 10,000 LUSD
+      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
+      const searchIterations = 10;
+      const [
+        partialRedemptionHintNicr,
+        firstHint,
+        upperHint,
+        lowerHint,
+      ] = await liquity.getRedemptionPositionHints(
+        amount,
+        oracleEthPrice,
+        searchIterations
+      );
+
+      expect(partialRedemptionHintNicr).eq("69529933762909647");
+      expect(firstHint).eq("0xc16aDd8bA17ab81B27e930Da8a67848120565d8c");
+      expect(upperHint).eq("0x66882C005188F0F4d95825ED7A7F78ed3055f167");
+      expect(lowerHint).eq("0x0C22C11a8ed4C23ffD19629283548B1692b58e92");
+    });
+  });
 });
 
 const resetHardhatBlockNumber = async (blockNumber) => {
