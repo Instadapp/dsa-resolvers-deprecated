@@ -164,12 +164,14 @@ describe("InstaLiquityResolver", () => {
   describe("getTrovePositionHints()", () => {
     it("returns the upper and lower address of Troves nearest to the given Trove", async () => {
       const collateral = hre.ethers.utils.parseEther("10");
-      const debt = hre.ethers.utils.parseUnits("5000", 18);
+      const debt = hre.ethers.utils.parseUnits("5000", 18); // 5,000 LUSD
       const searchIterations = 10;
+      const randomSeed = 3;
       const [upperHint, lowerHint] = await liquity.getTrovePositionHints(
         collateral,
         debt,
-        searchIterations
+        searchIterations,
+        randomSeed
       );
 
       expect(upperHint).eq(expectedTrovePositionHints.upperHint);
@@ -182,6 +184,7 @@ describe("InstaLiquityResolver", () => {
       const amount = hre.ethers.utils.parseUnits("10000", 18); // 10,000 LUSD
       const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
       const searchIterations = 10;
+      const randomSeed = 3;
       const [
         partialRedemptionHintNicr,
         firstHint,
@@ -190,7 +193,8 @@ describe("InstaLiquityResolver", () => {
       ] = await liquity.getRedemptionPositionHints(
         amount,
         oracleEthPrice,
-        searchIterations
+        searchIterations,
+        randomSeed
       );
 
       expect(partialRedemptionHintNicr).eq(
