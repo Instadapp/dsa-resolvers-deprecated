@@ -1,6 +1,10 @@
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
+interface PriceFeedOracle {
+	function fetchPrice() external returns (uint);
+}
+
 interface TroveManagerLike {
     function getBorrowingRateWithDecay() external view returns (uint);
     function getTCR(uint _price) external view returns (uint);
@@ -97,7 +101,10 @@ contract Helpers is Math {
     
     SortedTrovesLike internal constant sortedTroves =
         SortedTrovesLike(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
-    
+
+    PriceFeedOracle internal constant priceFeedOracle =
+        PriceFeedOracle(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
+
     struct Trove {
         uint collateral;
         uint debt;
@@ -132,7 +139,13 @@ contract Helpers is Math {
 
 
 contract Resolver is Helpers {
-    function getTrove(address owner, uint oracleEthPrice) public view returns (Trove memory) {
+
+    function fetchETHPrice() public returns (uint) {
+	return priceFeedOracle.fetchPrice();
+    }
+
+    function getTrove(address owner) public returns (Trove memory) {
+	uint oracleEthPrice = fetchETHPrice();
         (uint debt, uint collateral, , ) = troveManager.getEntireDebtAndColl(owner);
         uint icr = troveManager.getCurrentICR(owner, oracleEthPrice);
         return Trove(collateral, debt, icr);
@@ -152,14 +165,15 @@ contract Resolver is Helpers {
         return Stake(amount, ethGain, lusdGain);
     }
 
-    function getPosition(address owner, uint oracleEthPrice) external view returns (Position memory) {
-        Trove memory trove = getTrove(owner, oracleEthPrice);
+    function getPosition(address owner) external returns (Position memory) {
+        Trove memory trove = getTrove(owner);
         StabilityDeposit memory stability = getStabilityDeposit(owner);
         Stake memory stake = getStake(owner);
         return Position(trove, stability, stake);
     }
 
-    function getSystemState(uint oracleEthPrice) external view returns (System memory) {
+    function getSystemState() external returns (System memory) {
+	uint oracleEthPrice = fetchETHPrice();
         uint borrowFee = troveManager.getBorrowingRateWithDecay();
         uint ethTvl = add(activePool.getETH(), defaultPool.getETH());
         uint tcr = troveManager.getTCR(oracleEthPrice);
@@ -179,12 +193,14 @@ contract Resolver is Helpers {
         return sortedTroves.findInsertPosition(nominalCr, hintAddress, hintAddress);
     }
 
-    function getRedemptionPositionHints(uint amount, uint oracleEthPrice, uint searchIterations, uint randomSeed) external view returns (
+    function getRedemptionPositionHints(uint amount, uint searchIterations, uint randomSeed) external returns (
+		
         uint partialHintNicr,
         address firstHint,
         address upperHint,
         address lowerHint
     ) {
+	uint oracleEthPrice = fetchETHPrice();
         // See: https://github.com/liquity/dev#hints-for-redeemcollateral
         (firstHint, partialHintNicr, ) = hintHelpers.getRedemptionHints(amount, oracleEthPrice, 0);
         searchIterations = searchIterations == 0 ? mul(10, sqrt(sortedTroves.getSize())) : searchIterations;
