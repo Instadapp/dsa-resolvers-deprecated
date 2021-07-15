@@ -109,6 +109,7 @@ contract Helpers is Math {
         uint collateral;
         uint debt;
         uint icr;
+        uint oracleEthPrice;
     }
 
     struct StabilityDeposit {
@@ -134,21 +135,35 @@ contract Helpers is Math {
         uint ethTvl;
         uint tcr;
         bool isInRecoveryMode;
+        uint oracleEthPrice;
+    }
+
+    struct TrovePositionHints {
+        address upperHint;
+        address lowerHint;
+    }
+
+    struct RedemptionPositionHints {
+        uint partialHintNicr;
+        address firstHint;
+        address upperHint;
+        address lowerHint;
+        uint oracleEthPrice;
     }
 }
 
 
 contract Resolver is Helpers {
 
-    function fetchETHPrice() public returns (uint) {
-	return priceFeedOracle.fetchPrice();
+    function fetchEthPrice() public returns (uint) {
+	    return priceFeedOracle.fetchPrice();
     }
 
     function getTrove(address owner) public returns (Trove memory) {
-	uint oracleEthPrice = fetchETHPrice();
+	    uint oracleEthPrice = fetchEthPrice();
         (uint debt, uint collateral, , ) = troveManager.getEntireDebtAndColl(owner);
         uint icr = troveManager.getCurrentICR(owner, oracleEthPrice);
-        return Trove(collateral, debt, icr);
+        return Trove(collateral, debt, icr, oracleEthPrice);
     }
 
     function getStabilityDeposit(address owner) public view returns (StabilityDeposit memory) {
@@ -173,40 +188,37 @@ contract Resolver is Helpers {
     }
 
     function getSystemState() external returns (System memory) {
-	uint oracleEthPrice = fetchETHPrice();
+	    uint oracleEthPrice = fetchEthPrice();
         uint borrowFee = troveManager.getBorrowingRateWithDecay();
         uint ethTvl = add(activePool.getETH(), defaultPool.getETH());
         uint tcr = troveManager.getTCR(oracleEthPrice);
         bool isInRecoveryMode = troveManager.checkRecoveryMode(oracleEthPrice);
-        return System(borrowFee, ethTvl, tcr, isInRecoveryMode);
+        return System(borrowFee, ethTvl, tcr, isInRecoveryMode, oracleEthPrice);
     }
 
     function getTrovePositionHints(uint collateral, uint debt, uint searchIterations, uint randomSeed) external view returns (
-        address upperHint,
-        address lowerHint
+        TrovePositionHints memory
     ) {
         // See: https://github.com/liquity/dev#supplying-hints-to-trove-operations
         uint nominalCr = hintHelpers.computeNominalCR(collateral, debt);
         searchIterations = searchIterations == 0 ? mul(10, sqrt(sortedTroves.getSize())) : searchIterations;
         randomSeed = randomSeed == 0 ? block.number : randomSeed;
         (address hintAddress, ,) = hintHelpers.getApproxHint(nominalCr, searchIterations, randomSeed);
-        return sortedTroves.findInsertPosition(nominalCr, hintAddress, hintAddress);
+        (address upperHint, address lowerHint) = sortedTroves.findInsertPosition(nominalCr, hintAddress, hintAddress);
+        return TrovePositionHints(upperHint, lowerHint);
     }
 
     function getRedemptionPositionHints(uint amount, uint searchIterations, uint randomSeed) external returns (
-		
-        uint partialHintNicr,
-        address firstHint,
-        address upperHint,
-        address lowerHint
+        RedemptionPositionHints memory
     ) {
-	uint oracleEthPrice = fetchETHPrice();
+	    uint oracleEthPrice = fetchEthPrice();
         // See: https://github.com/liquity/dev#hints-for-redeemcollateral
-        (firstHint, partialHintNicr, ) = hintHelpers.getRedemptionHints(amount, oracleEthPrice, 0);
+        (address firstHint, uint partialHintNicr, ) = hintHelpers.getRedemptionHints(amount, oracleEthPrice, 0);
         searchIterations = searchIterations == 0 ? mul(10, sqrt(sortedTroves.getSize())) : searchIterations;
         randomSeed = randomSeed == 0 ? block.number : randomSeed;
         (address hintAddress, ,) = hintHelpers.getApproxHint(partialHintNicr, searchIterations, randomSeed);
-        (upperHint, lowerHint) = sortedTroves.findInsertPosition(partialHintNicr, hintAddress, hintAddress);
+        (address upperHint, address lowerHint) = sortedTroves.findInsertPosition(partialHintNicr, hintAddress, hintAddress);
+        return RedemptionPositionHints(partialHintNicr, firstHint, upperHint, lowerHint, oracleEthPrice);
     }
 }
 

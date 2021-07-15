@@ -18,6 +18,7 @@ const expectedTrovePosition = {
   collateral: BigNumber.from("582880000000000000000000"),
   debt: BigNumber.from("372000200000000000000000000"),
   icr: BigNumber.from("3859882210893925325"),
+  oracleEthPrice: BigNumber.from("2463417777980000000000"),
 };
 const expectedStabilityPosition = {
   deposit: BigNumber.from("299979329615565997640451998"),
@@ -34,6 +35,7 @@ const expectedSystemState = {
   ethTvl: BigNumber.from("852500462432421494350957"),
   tcr: BigNumber.from("3250195441371082828"),
   isInRecoveryMode: false,
+  oracleEthPrice: BigNumber.from("2463417777980000000000"),
 };
 const expectedTrovePositionHints = {
   upperHint: "0xbf9a4eCC4151f28C03100bA2C0555a3D3e439e69",
@@ -44,6 +46,7 @@ const expectedRedemptionPositionHints = {
   firstHint: "0xc16aDd8bA17ab81B27e930Da8a67848120565d8c",
   upperHint: "0x66882C005188F0F4d95825ED7A7F78ed3055f167",
   lowerHint: "0x0C22C11a8ed4C23ffD19629283548B1692b58e92",
+  oracleEthPrice: BigNumber.from("2463417777980000000000"),
 };
 /* End: Mock test data */
 
@@ -75,22 +78,23 @@ describe("InstaLiquityResolver", () => {
 
   describe("getTrove()", () => {
     it("returns a user's Trove position", async () => {
-      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
-      const trovePosition = await liquity.getTrove(
-        JUSTIN_SUN_ADDRESS,
-        oracleEthPrice
+      const trovePosition = await liquity.callStatic.getTrove(
+        JUSTIN_SUN_ADDRESS
       );
       expect(trovePosition.collateral).to.equal(
         expectedTrovePosition.collateral
       );
       expect(trovePosition.debt).to.equal(expectedTrovePosition.debt);
       expect(trovePosition.icr).to.equal(expectedTrovePosition.icr);
+      expect(trovePosition.oracleEthPrice).to.equal(
+        expectedTrovePosition.oracleEthPrice
+      );
     });
   });
 
   describe("getStabilityDeposit()", () => {
     it("returns a user's Stability Pool position", async () => {
-      const stabilityPosition = await liquity.getStabilityDeposit(
+      const stabilityPosition = await liquity.callStatic.getStabilityDeposit(
         JUSTIN_SUN_ADDRESS
       );
       expect(stabilityPosition.deposit).to.equal(
@@ -107,7 +111,9 @@ describe("InstaLiquityResolver", () => {
 
   describe("getStake()", () => {
     it("returns a user's Stake position", async () => {
-      const stakePosition = await liquity.getStake(JUSTIN_SUN_ADDRESS);
+      const stakePosition = await liquity.callStatic.getStake(
+        JUSTIN_SUN_ADDRESS
+      );
       expect(stakePosition.amount).to.equal(expectedStakePosition.amount);
       expect(stakePosition.ethGain).to.equal(expectedStakePosition.ethGain);
       expect(stakePosition.lusdGain).to.equal(expectedStakePosition.lusdGain);
@@ -116,11 +122,7 @@ describe("InstaLiquityResolver", () => {
 
   describe("getPosition()", () => {
     it("returns a user's Liquity position", async () => {
-      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
-      const position = await liquity.getPosition(
-        JUSTIN_SUN_ADDRESS,
-        oracleEthPrice
-      );
+      const position = await liquity.callStatic.getPosition(JUSTIN_SUN_ADDRESS);
       const expectedPosition = {
         trove: expectedTrovePosition,
         stability: expectedStabilityPosition,
@@ -150,13 +152,15 @@ describe("InstaLiquityResolver", () => {
 
   describe("getSystemState()", () => {
     it("returns Liquity system state", async () => {
-      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
-      const systemState = await liquity.getSystemState(oracleEthPrice);
+      const systemState = await liquity.callStatic.getSystemState();
       expect(systemState.borrowFee).to.equal(expectedSystemState.borrowFee);
       expect(systemState.ethTvl).to.equal(expectedSystemState.ethTvl);
       expect(systemState.tcr).to.equal(expectedSystemState.tcr);
       expect(systemState.isInRecoveryMode).to.equal(
         expectedSystemState.isInRecoveryMode
+      );
+      expect(systemState.oracleEthPrice).to.equal(
+        expectedSystemState.oracleEthPrice
       );
     });
   });
@@ -167,7 +171,10 @@ describe("InstaLiquityResolver", () => {
       const debt = hre.ethers.utils.parseUnits("5000", 18); // 5,000 LUSD
       const searchIterations = 10;
       const randomSeed = 3;
-      const [upperHint, lowerHint] = await liquity.getTrovePositionHints(
+      const [
+        upperHint,
+        lowerHint,
+      ] = await liquity.callStatic.getTrovePositionHints(
         collateral,
         debt,
         searchIterations,
@@ -182,7 +189,6 @@ describe("InstaLiquityResolver", () => {
   describe("getRedemptionPositionHints()", () => {
     it("returns the upper and lower address of the range of Troves to be redeemed against the given amount", async () => {
       const amount = hre.ethers.utils.parseUnits("10000", 18); // 10,000 LUSD
-      const oracleEthPrice = await liquityPriceOracle.callStatic.fetchPrice();
       const searchIterations = 10;
       const randomSeed = 3;
       const [
@@ -190,9 +196,9 @@ describe("InstaLiquityResolver", () => {
         firstHint,
         upperHint,
         lowerHint,
-      ] = await liquity.getRedemptionPositionHints(
-        amount,
         oracleEthPrice,
+      ] = await liquity.callStatic.getRedemptionPositionHints(
+        amount,
         searchIterations,
         randomSeed
       );
@@ -203,6 +209,7 @@ describe("InstaLiquityResolver", () => {
       expect(firstHint).eq(expectedRedemptionPositionHints.firstHint);
       expect(upperHint).eq(expectedRedemptionPositionHints.upperHint);
       expect(lowerHint).eq(expectedRedemptionPositionHints.lowerHint);
+      expect(oracleEthPrice).eq(expectedRedemptionPositionHints.oracleEthPrice);
     });
   });
 });
